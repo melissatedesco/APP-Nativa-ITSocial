@@ -33,6 +33,16 @@ export interface ProfiloDto {
   username: string;
   nome: string;
   cognome: string;
+  bio?: string;
+  fotoProfilo?: string;
+  ruolo?: string;
+  numPost: number;
+  numLike: number;
+  numSeguaci: number;
+  numSeguiti: number;
+  seguito: boolean;
+  posts?: Post[];
+  memberDal?: string;
 }
 
 // LoginResponse matches the actual backend response
