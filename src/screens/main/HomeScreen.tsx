@@ -11,13 +11,16 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { postService } from '../../services/postService';
 import { likeService } from '../../services/likeService';
-import { Post } from '../../types';
+import { MEDIA_BASE_URL } from '../../services/api';
+import { Post, MainStackParamList } from '../../types';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -79,10 +82,12 @@ function PostCard({
   post,
   liked,
   onLike,
+  onPressAuthor,
 }: {
   post: Post;
   liked: boolean;
   onLike: (id: number) => void;
+  onPressAuthor: (username: string) => void;
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const ruoloTag = getRuoloTag(post.ruoloUtente);
@@ -95,12 +100,16 @@ function PostCard({
     onLike(post.id);
   }
 
-  const likeCount = (post.numeroLike ?? 0) + (liked ? 0 : 0); // count managed by parent
+  const images = post.allegati?.filter(a => a.tipo === 'IMAGE') ?? [];
 
   return (
     <View style={styles.postCard}>
-      {/* Header */}
-      <View style={styles.postHeader}>
+      {/* Header — cliccabile per navigare al profilo */}
+      <TouchableOpacity
+        style={styles.postHeader}
+        onPress={() => onPressAuthor(post.usernameUtente)}
+        activeOpacity={0.7}
+      >
         <Avatar name={post.nomeUtente} size={44} />
         <View style={styles.postHeaderInfo}>
           <View style={styles.postHeaderRow}>
@@ -117,10 +126,24 @@ function PostCard({
             @{post.usernameUtente}{'  ·  '}{timeAgo(post.dataOra)}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Content */}
       <Text style={styles.postContent}>{post.contenuto}</Text>
+
+      {/* Images */}
+      {images.length > 0 && (
+        <View style={styles.imageContainer}>
+          {images.map(a => (
+            <Image
+              key={a.id}
+              source={{ uri: MEDIA_BASE_URL + a.url }}
+              style={images.length === 1 ? styles.postImageSingle : styles.postImageGrid}
+              contentFit="cover"
+            />
+          ))}
+        </View>
+      )}
 
       {/* Actions */}
       <View style={styles.postActions}>
@@ -227,6 +250,7 @@ type Tab = 'pertе' | 'seguiti';
 
 export default function HomeScreen() {
   const { session } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [posts, setPosts]       = useState<Post[]>([]);
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   const [tab, setTab]           = useState<Tab>('pertе');
@@ -376,6 +400,7 @@ export default function HomeScreen() {
           post={item}
           liked={likedIds.has(item.id)}
           onLike={handleLike}
+          onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
         />
       )}
       ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
@@ -521,6 +546,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 4,
+  },
+
+  // Images
+  imageContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingBottom: 8,
+  },
+  postImageSingle: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    backgroundColor: C.border,
+  },
+  postImageGrid: {
+    width: '48%',
+    height: 150,
+    borderRadius: 10,
+    backgroundColor: C.border,
   },
 
   // Actions bar
