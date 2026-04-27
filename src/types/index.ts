@@ -69,6 +69,14 @@ export interface RegisterData {
   password: string;
 }
 
+export interface AllegatoDto {
+  id: number;
+  nomeOriginale: string;
+  url: string;
+  mimeType: string;
+  tipo: string; // "IMAGE" | "DOCUMENT"
+}
+
 export interface Post {
   id: number;
   idUtente: number;
@@ -80,7 +88,7 @@ export interface Post {
   numeroLike: number;
   commenti: unknown[];
   like: unknown[];
-  allegati?: unknown[];
+  allegati?: AllegatoDto[];
 }
 
 export type RootStackParamList = {
@@ -97,4 +105,9 @@ export type MainTabParamList = {
   Home: undefined;
   Search: undefined;
   Profile: undefined;
+};
+
+export type MainStackParamList = {
+  Tabs: undefined;
+  UserProfile: { username: string };
 };

@@ -2,7 +2,9 @@ import axios from 'axios';
 import { storage } from '../utils/storage';
 
 // IP locale del PC — deve essere sulla stessa rete WiFi del telefono
-const BASE_URL = 'http://192.168.1.237:8080/api';
+const HOST = 'http://192.168.1.8:8080';
+export const MEDIA_BASE_URL = HOST;
+const BASE_URL = `${HOST}/api`;
 
 export const api = axios.create({
   baseURL: BASE_URL,

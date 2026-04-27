@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  FlatList,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { userService } from '../../services/userService';
 import { ProfiloDto, Post } from '../../types';
@@ -96,29 +96,59 @@ function PostCard({ post }: { post: Post }) {
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { session, logout } = useAuth();
+  const route = useRoute();
+  const paramUsername = (route.params as { username?: string } | undefined)?.username;
+  const isOwnProfile = !paramUsername || paramUsername === session?.username;
+  const targetUsername = paramUsername ?? session?.username ?? '';
+
   const [profilo, setProfilo] = useState<ProfiloDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [seguito, setSeguito] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
-    if (!session?.username) return;
+    if (!targetUsername) return;
+    setLoading(true);
+    setProfilo(null);
+    setError('');
     (async () => {
       try {
-        const data = await userService.getProfileByUsername(session.username);
+        const data = await userService.getProfileByUsername(targetUsername);
         setProfilo(data);
+        setSeguito(data.seguito ?? false);
       } catch {
         setError('Impossibile caricare il profilo.');
       } finally {
         setLoading(false);
       }
     })();
-  }, [session?.username]);
+  }, [targetUsername]);
 
   function handleLogout() {
     Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
       { text: 'Annulla', style: 'cancel' },
       { text: 'Esci', style: 'destructive', onPress: logout },
     ]);
+  }
+
+  async function handleFollow() {
+    setFollowLoading(true);
+    try {
+      if (seguito) {
+        await userService.unfollowUser(targetUsername);
+        setSeguito(false);
+        setProfilo(p => p ? { ...p, numSeguaci: (p.numSeguaci ?? 1) - 1 } : p);
+      } else {
+        await userService.followUser(targetUsername);
+        setSeguito(true);
+        setProfilo(p => p ? { ...p, numSeguaci: (p.numSeguaci ?? 0) + 1 } : p);
+      }
+    } catch {
+      // nessuna modifica in caso di errore
+    } finally {
+      setFollowLoading(false);
+    }
   }
 
   // ── Loading ────────────────────────────────────────────────────────────────
@@ -140,11 +170,11 @@ export default function ProfileScreen() {
     );
   }
 
-  const ruoloTag = getRuoloTag(profilo?.ruolo ?? session?.ruoli?.[0]?.nome);
+  const ruoloTag = getRuoloTag(profilo?.ruolo ?? (isOwnProfile ? session?.ruoli?.[0]?.nome : undefined));
   const displayName = profilo
     ? `${profilo.nome} ${profilo.cognome}`
     : `${session?.nome ?? ''} ${session?.cognome ?? ''}`;
-  const username = profilo?.username ?? session?.username ?? '';
+  const username = profilo?.username ?? targetUsername;
   const avatarLetter = (username[0] ?? '?').toUpperCase();
   const posts: Post[] = (profilo?.posts as Post[]) ?? [];
 
@@ -188,9 +218,24 @@ export default function ProfileScreen() {
               <Text style={[styles.roleTagText, { color: ruoloTag.text }]}>{ruoloTag.label}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-            <Text style={styles.logoutBtnText}>Esci</Text>
-          </TouchableOpacity>
+          {isOwnProfile ? (
+            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+              <Text style={styles.logoutBtnText}>Esci</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.followBtn, seguito && styles.followBtnActive]}
+              onPress={handleFollow}
+              disabled={followLoading}
+            >
+              {followLoading
+                ? <ActivityIndicator size="small" color={seguito ? C.primary : '#fff'} />
+                : <Text style={[styles.followBtnText, seguito && styles.followBtnTextActive]}>
+                    {seguito ? 'Segui già' : 'Segui'}
+                  </Text>
+              }
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Stats 2x2 ─────────────────────────────────────────────── */}
@@ -339,6 +384,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   logoutBtnText: { color: C.danger, fontSize: 13, fontWeight: '600' },
+  followBtn: {
+    backgroundColor: C.primary,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    marginTop: 4,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  followBtnActive: {
+    backgroundColor: C.card,
+    borderWidth: 1.5,
+    borderColor: C.primary,
+  },
+  followBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  followBtnTextActive: { color: C.primary },
 
   // Stats card
   statsCard: {
