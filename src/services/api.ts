@@ -8,7 +8,7 @@ const BASE_URL = `${HOST}/api`;
 
 export const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -18,6 +18,9 @@ api.interceptors.request.use(async (config) => {
   const token = await storage.getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    console.log('[API]', config.method?.toUpperCase(), config.url, '→ token presente');
+  } else {
+    console.warn('[API]', config.method?.toUpperCase(), config.url, '→ nessun token');
   }
   return config;
 });
@@ -25,6 +28,12 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    console.error('[API] Errore risposta:', {
+      url: error.config?.url,
+      status: error.response?.status ?? 'nessuna risposta (network error o timeout)',
+      message: error.message,
+      code: error.code,
+    });
     if (error.response?.status === 401) {
       await storage.clearAuth();
     }

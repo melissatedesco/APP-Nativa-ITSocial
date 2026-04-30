@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useProfile } from '../../context/UserContext';
 import { userService } from '../../services/userService';
 import { ProfiloDto, Post } from '../../types';
 
@@ -95,35 +96,44 @@ function PostCard({ post }: { post: Post }) {
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
-  const { session, logout } = useAuth();
+  const { user, logout } = useAuth();
+  const { profile, isLoading: profileLoading, loadProfile } = useProfile();
   const route = useRoute();
   const paramUsername = (route.params as { username?: string } | undefined)?.username;
-  const isOwnProfile = !paramUsername || paramUsername === session?.username;
-  const targetUsername = paramUsername ?? session?.username ?? '';
+  const isOwnProfile = !paramUsername || paramUsername === user?.username;
+  const targetUsername = paramUsername ?? user?.username ?? '';
 
-  const [profilo, setProfilo] = useState<ProfiloDto | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [otherProfilo, setOtherProfilo] = useState<ProfiloDto | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [seguito, setSeguito] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
+  // Profilo proprio → context; profilo altrui → stato locale
+  const profilo: ProfiloDto | null = isOwnProfile
+    ? (profile as ProfiloDto | null)
+    : otherProfilo;
+  const isCurrentlyLoading = isOwnProfile ? profileLoading : loading;
+
   useEffect(() => {
     if (!targetUsername) return;
-    setLoading(true);
-    setProfilo(null);
     setError('');
-    (async () => {
-      try {
-        const data = await userService.getProfileByUsername(targetUsername);
-        setProfilo(data);
-        setSeguito(data.seguito ?? false);
-      } catch {
-        setError('Impossibile caricare il profilo.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [targetUsername]);
+
+    if (isOwnProfile) {
+      loadProfile(targetUsername).catch(() => setError('Impossibile caricare il profilo.'));
+    } else {
+      setLoading(true);
+      setOtherProfilo(null);
+      setSeguito(false);
+      userService.getProfileByUsername(targetUsername)
+        .then(data => {
+          setOtherProfilo(data);
+          setSeguito(data.seguito ?? false);
+        })
+        .catch(() => setError('Impossibile caricare il profilo.'))
+        .finally(() => setLoading(false));
+    }
+  }, [targetUsername, isOwnProfile]);
 
   function handleLogout() {
     Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
@@ -152,7 +162,7 @@ export default function ProfileScreen() {
   }
 
   // ── Loading ────────────────────────────────────────────────────────────────
-  if (loading) {
+  if (isCurrentlyLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={C.primary} />
@@ -170,10 +180,10 @@ export default function ProfileScreen() {
     );
   }
 
-  const ruoloTag = getRuoloTag(profilo?.ruolo ?? (isOwnProfile ? session?.ruoli?.[0]?.nome : undefined));
+  const ruoloTag = getRuoloTag(profilo?.ruolo ?? (isOwnProfile ? user?.ruoli?.[0]?.nome : undefined));
   const displayName = profilo
     ? `${profilo.nome} ${profilo.cognome}`
-    : `${session?.nome ?? ''} ${session?.cognome ?? ''}`;
+    : `${user?.nome ?? ''} ${user?.cognome ?? ''}`;
   const username = profilo?.username ?? targetUsername;
   const avatarLetter = (username[0] ?? '?').toUpperCase();
   const posts: Post[] = (profilo?.posts as Post[]) ?? [];

@@ -1,0 +1,147 @@
+{
+  "info": {
+    "name": "ITSocial API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",  "value": "http://192.168.1.8:8080/api", "type": "string" },
+    { "key": "token",    "value": "",                             "type": "string" },
+    { "key": "username", "value": "mario.rossi",                 "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1 — Auth",
+      "item": [
+        {
+          "name": "Registrazione (crea utente di test)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/registrazione",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Mario\",\n  \"cognome\": \"Rossi\",\n  \"email\": \"mario.rossi@test.it\",\n  \"username\": \"mario.rossi\",\n  \"password\": \"Test1234!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login → salva token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.token) {",
+                  "  pm.collectionVariables.set('token', res.token);",
+                  "  pm.collectionVariables.set('username', res.username);",
+                  "  console.log('Token salvato:', res.token.substring(0, 30) + '...');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"mario.rossi\",\n  \"password\": \"Test1234!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        },
+        {
+          "name": "Password dimenticata",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/password-dimenticata",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"mario.rossi@test.it\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — Profilo",
+      "item": [
+        {
+          "name": "GET mio profilo (/utenti/my-profile)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/utenti/my-profile"
+          }
+        },
+        {
+          "name": "GET profilo per username",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/utenti/profilo/{{username}}"
+          }
+        },
+        {
+          "name": "PUT aggiorna profilo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/utenti/my-profile",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Mario\",\n  \"cognome\": \"Bianchi\",\n  \"bio\": \"Studente di informatica.\",\n  \"fotoProfilo\": \"https://esempio.it/avatar.jpg\",\n  \"dataNascita\": \"2000-05-15\",\n  \"telefono\": \"+39 333 1234567\",\n  \"indirizzo\": \"Via Roma 1, Milano\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET cerca utenti",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/utenti/search?q=mario",
+              "query": [{ "key": "q", "value": "mario" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 — Social",
+      "item": [
+        {
+          "name": "POST segui utente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/segui/{{username}}"
+          }
+        },
+        {
+          "name": "DELETE smetti di seguire",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/segui/{{username}}"
+          }
+        }
+      ]
+    }
+  ]
+}

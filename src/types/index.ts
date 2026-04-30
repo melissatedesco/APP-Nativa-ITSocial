@@ -91,6 +91,33 @@ export interface Post {
   allegati?: AllegatoDto[];
 }
 
+export interface UserProfile {
+  id: number;
+  username: string;
+  nome: string;
+  cognome: string;
+  bio?: string;
+  fotoProfilo?: string;
+  ruolo?: string;
+  numPost: number;
+  numLike: number;
+  numSeguaci: number;
+  numSeguiti: number;
+  seguito: boolean;
+  posts?: Post[];
+  memberDal?: string;
+}
+
+export interface UpdateProfileData {
+  nome?: string;
+  cognome?: string;
+  bio?: string;
+  fotoProfilo?: string;
+  dataNascita?: string;   // formato "YYYY-MM-DD"
+  telefono?: string;      // pattern: cifre, +, spazi, trattini, parentesi (7-15 chars)
+  indirizzo?: string;
+}
+
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;

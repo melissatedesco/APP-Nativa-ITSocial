@@ -1,5 +1,5 @@
 import { api } from './api';
-import { User, ProfiloDto } from '../types';
+import { User, ProfiloDto, UserProfile, UpdateProfileData } from '../types';
 
 export const userService = {
   async getMyProfile(): Promise<User> {
@@ -23,5 +23,15 @@ export const userService = {
 
   async unfollowUser(username: string): Promise<void> {
     await api.delete(`/segui/${username}`);
+  },
+
+  async getProfile(userId: string): Promise<UserProfile> {
+    const { data } = await api.get<UserProfile>(`/utenti/profilo/${userId}`);
+    return data;
+  },
+
+  async updateProfile(payload: UpdateProfileData): Promise<UserProfile> {
+    const { data } = await api.put<UserProfile>('/utenti/my-profile', payload);
+    return data;
   },
 };

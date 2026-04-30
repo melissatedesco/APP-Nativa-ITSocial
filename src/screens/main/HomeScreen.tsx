@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -17,10 +17,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
-import { postService } from '../../services/postService';
-import { likeService } from '../../services/likeService';
 import { MEDIA_BASE_URL } from '../../services/api';
 import { Post, MainStackParamList } from '../../types';
+import { useFeed, FeedTab } from '../../hooks/useFeed';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -193,10 +192,13 @@ function Composer({
   async function handlePublish() {
     if (!text.trim()) return;
     setPublishing(true);
-    await onPublish(text.trim());
-    setText('');
-    setOpen(false);
-    setPublishing(false);
+    try {
+      await onPublish(text.trim());
+      setText('');
+      setOpen(false);
+    } finally {
+      setPublishing(false);
+    }
   }
 
   return (
@@ -246,114 +248,31 @@ function Composer({
 }
 
 // ─── Home Screen ─────────────────────────────────────────────────────────────
-type Tab = 'pertе' | 'seguiti';
-
 export default function HomeScreen() {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const [posts, setPosts]       = useState<Post[]>([]);
-  const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
-  const [tab, setTab]           = useState<Tab>('pertе');
-  const [loading, setLoading]   = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const {
+    posts,
+    likedIds,
+    tab,
+    isLoading,
+    isRefreshing,
+    publishError,
+    changeTab,
+    refresh,
+    toggleLike,
+    publishPost,
+  } = useFeed();
 
-  async function loadPosts(currentTab: Tab) {
-    try {
-      const data = currentTab === 'seguiti'
-        ? await postService.getFeedSeguiti()
-        : await postService.getFeed();
-      setPosts(Array.isArray(data) ? data : []);
-    } catch {
-      setPosts([]);
-    }
-  }
-
-  async function loadLikedIds() {
-    try {
-      const likes = await likeService.getMyLikes();
-      setLikedIds(new Set(likes.map((l) => l.idPost)));
-    } catch {
-      // non bloccante
-    }
-  }
-
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      await Promise.all([loadPosts(tab), loadLikedIds()]);
-      setLoading(false);
-    })();
-  }, []);
-
-  async function handleTabChange(t: Tab) {
-    if (t === tab) return;
-    setTab(t);
-    setLoading(true);
-    await loadPosts(t);
-    setLoading(false);
-  }
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await Promise.all([loadPosts(tab), loadLikedIds()]);
-    setRefreshing(false);
-  }, [tab]);
-
-  async function handleLike(postId: number) {
-    const isLiked = likedIds.has(postId);
-    // ottimistic update
-    setLikedIds((prev) => {
-      const next = new Set(prev);
-      isLiked ? next.delete(postId) : next.add(postId);
-      return next;
-    });
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? { ...p, numeroLike: (p.numeroLike ?? 0) + (isLiked ? -1 : 1) }
-          : p
-      )
-    );
-    try {
-      isLiked
-        ? await likeService.unlikePost(postId)
-        : await likeService.likePost(postId);
-    } catch {
-      // rollback
-      setLikedIds((prev) => {
-        const next = new Set(prev);
-        isLiked ? next.add(postId) : next.delete(postId);
-        return next;
-      });
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? { ...p, numeroLike: (p.numeroLike ?? 0) + (isLiked ? 1 : -1) }
-            : p
-        )
-      );
-    }
-  }
-
-  async function handlePublish(text: string) {
-    try {
-      const newPost = await postService.createPost(text);
-      setPosts((prev) => [newPost, ...prev]);
-    } catch {
-      // TODO: mostra errore
-    }
-  }
-
-  // ── Render header (tab + composer) ──────────────────────────────────────
   const ListHeader = (
     <View>
       {/* Tab filter */}
       <View style={styles.tabBar}>
-        {(['pertе', 'seguiti'] as Tab[]).map((t) => (
+        {(['pertе', 'seguiti'] as FeedTab[]).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
-            onPress={() => handleTabChange(t)}
+            onPress={() => changeTab(t)}
             activeOpacity={0.8}
           >
             <Text style={[styles.tabBtnText, tab === t && styles.tabBtnTextActive]}>
@@ -365,10 +284,17 @@ export default function HomeScreen() {
 
       {/* Composer */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Composer username={session?.username ?? '?'} onPublish={handlePublish} />
+        <Composer username={user?.username ?? '?'} onPublish={publishPost} />
       </KeyboardAvoidingView>
 
-      {loading && (
+      {/* Publish error banner */}
+      {publishError && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{publishError}</Text>
+        </View>
+      )}
+
+      {isLoading && (
         <View style={styles.feedLoading}>
           <ActivityIndicator color={C.primary} />
         </View>
@@ -378,16 +304,16 @@ export default function HomeScreen() {
 
   return (
     <FlatList
-      data={loading ? [] : posts}
+      data={isLoading ? [] : posts}
       keyExtractor={(item) => String(item.id)}
       style={styles.page}
       contentContainerStyle={styles.listContent}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />
+        <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={C.primary} />
       }
       ListHeaderComponent={ListHeader}
       ListEmptyComponent={
-        !loading ? (
+        !isLoading ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>📭</Text>
             <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
@@ -399,7 +325,7 @@ export default function HomeScreen() {
         <PostCard
           post={item}
           liked={likedIds.has(item.id)}
-          onLike={handleLike}
+          onLike={toggleLike}
           onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
         />
       )}
@@ -598,6 +524,19 @@ const styles = StyleSheet.create({
   },
   actionCount: { fontSize: 13, color: C.textSoft, fontWeight: '500' },
   actionCountLiked: { color: C.warm, fontWeight: '700' },
+
+  // Publish error banner
+  errorBanner: {
+    marginHorizontal: 12,
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorBannerText: { fontSize: 13, color: '#B91C1C', fontWeight: '500' },
 
   // Empty state
   emptyState: {
