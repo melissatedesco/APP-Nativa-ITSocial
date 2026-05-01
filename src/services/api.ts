@@ -2,9 +2,10 @@ import axios from 'axios';
 import { storage } from '../utils/storage';
 
 // IP locale del PC — deve essere sulla stessa rete WiFi del telefono
-const HOST = 'http://192.168.1.8:8080';
+const HOST = 'http://192.168.1.101:8080';
 export const MEDIA_BASE_URL = HOST;
 const BASE_URL = `${HOST}/api`;
+console.log('🌐 API Base URL:', BASE_URL);
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -15,12 +16,14 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
+  const fullUrl = (config.baseURL ?? '') + (config.url ?? '');
+  console.log('[API] →', config.method?.toUpperCase(), fullUrl);
   const token = await storage.getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-    console.log('[API]', config.method?.toUpperCase(), config.url, '→ token presente');
+    console.log('[API] token presente');
   } else {
-    console.warn('[API]', config.method?.toUpperCase(), config.url, '→ nessun token');
+    console.warn('[API] nessun token');
   }
   return config;
 });
