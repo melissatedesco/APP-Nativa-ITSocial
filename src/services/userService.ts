@@ -34,4 +34,15 @@ export const userService = {
     const { data } = await api.put<UserProfile>('/utenti/my-profile', payload);
     return data;
   },
+
+  async updateProfilePhoto(photoUri: string): Promise<UserProfile> {
+    const filename = photoUri.split('/').pop() ?? 'photo.jpg';
+    const ext = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const formData = new FormData();
+    formData.append('foto', { uri: photoUri, name: filename, type: `image/${ext}` } as any);
+    const { data } = await api.post<UserProfile>('/utenti/my-profile/foto', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
 };

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import axios from 'axios';
 import { Post } from '../types';
 import { postService } from '../services/postService';
 import { likeService } from '../services/likeService';
+import { salvataggioService } from '../services/salvataggioService';
 
 export type FeedTab = 'pertе' | 'seguiti';
 
-// Converts raw API/network errors into readable Italian messages for the UI.
 function parsePostError(err: unknown): string {
   if (axios.isAxiosError(err)) {
     if (!err.response) return 'Impossibile raggiungere il server. Controlla la connessione.';
@@ -23,6 +24,7 @@ function parsePostError(err: unknown): string {
 export interface UseFeedReturn {
   posts: Post[];
   likedIds: Set<number>;
+  savedIds: Set<number>;
   tab: FeedTab;
   isLoading: boolean;
   isRefreshing: boolean;
@@ -30,12 +32,15 @@ export interface UseFeedReturn {
   changeTab: (newTab: FeedTab) => void;
   refresh: () => void;
   toggleLike: (postId: number) => void;
-  publishPost: (text: string) => Promise<void>;
+  toggleSave: (postId: number) => void;
+  deletePost: (postId: number) => Promise<void>;
+  publishPost: (text: string, imageUris?: string[]) => Promise<void>;
 }
 
 export function useFeed(): UseFeedReturn {
   const [posts, setPosts] = useState<Post[]>([]);
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
+  const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
   const [tab, setTab] = useState<FeedTab>('pertе');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -57,15 +62,23 @@ export function useFeed(): UseFeedReturn {
       const likes = await likeService.getMyLikes();
       setLikedIds(new Set(likes.map(l => l.idPost)));
     } catch {
-      // non-blocking: liked state is decorative, not critical
+      // non-blocking
     }
   }
 
-  // Initial load
+  async function fetchSavedIds(): Promise<void> {
+    try {
+      const ids = await salvataggioService.getMieiSalvataggi();
+      setSavedIds(new Set(ids));
+    } catch {
+      // non-blocking
+    }
+  }
+
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      await Promise.all([fetchPosts(tab), fetchLikedIds()]);
+      await Promise.all([fetchPosts(tab), fetchLikedIds(), fetchSavedIds()]);
       setIsLoading(false);
     })();
   }, []);
@@ -79,15 +92,13 @@ export function useFeed(): UseFeedReturn {
 
   const refresh = useCallback((): void => {
     setIsRefreshing(true);
-    Promise.all([fetchPosts(tab), fetchLikedIds()]).finally(() =>
+    Promise.all([fetchPosts(tab), fetchLikedIds(), fetchSavedIds()]).finally(() =>
       setIsRefreshing(false)
     );
   }, [tab]);
 
   function toggleLike(postId: number): void {
     const wasLiked = likedIds.has(postId);
-
-    // Optimistic update — apply immediately before the API call resolves.
     setLikedIds(prev => {
       const next = new Set(prev);
       wasLiked ? next.delete(postId) : next.add(postId);
@@ -100,13 +111,10 @@ export function useFeed(): UseFeedReturn {
           : p
       )
     );
-
     const call = wasLiked
       ? likeService.unlikePost(postId)
       : likeService.likePost(postId);
-
     call.catch(() => {
-      // Rollback both likedIds and counter if the server call fails.
       setLikedIds(prev => {
         const next = new Set(prev);
         wasLiked ? next.add(postId) : next.delete(postId);
@@ -122,10 +130,38 @@ export function useFeed(): UseFeedReturn {
     });
   }
 
-  async function publishPost(text: string): Promise<void> {
+  function toggleSave(postId: number): void {
+    const wasSaved = savedIds.has(postId);
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      wasSaved ? next.delete(postId) : next.add(postId);
+      return next;
+    });
+    const call = wasSaved
+      ? salvataggioService.rimuovi(postId)
+      : salvataggioService.salva(postId);
+    call.catch(() => {
+      setSavedIds(prev => {
+        const next = new Set(prev);
+        wasSaved ? next.add(postId) : next.delete(postId);
+        return next;
+      });
+    });
+  }
+
+  async function deletePost(postId: number): Promise<void> {
+    try {
+      await postService.deletePost(postId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+    } catch {
+      Alert.alert('Errore', 'Impossibile eliminare il post. Riprova.');
+    }
+  }
+
+  async function publishPost(text: string, imageUris?: string[]): Promise<void> {
     setPublishError(null);
     try {
-      const newPost = await postService.createPost(text);
+      const newPost = await postService.createPost(text, imageUris);
       setPosts(prev => [newPost, ...prev]);
     } catch (err) {
       const message = parsePostError(err);
@@ -137,6 +173,7 @@ export function useFeed(): UseFeedReturn {
   return {
     posts,
     likedIds,
+    savedIds,
     tab,
     isLoading,
     isRefreshing,
@@ -144,6 +181,8 @@ export function useFeed(): UseFeedReturn {
     changeTab,
     refresh,
     toggleLike,
+    toggleSave,
+    deletePost,
     publishPost,
   };
 }

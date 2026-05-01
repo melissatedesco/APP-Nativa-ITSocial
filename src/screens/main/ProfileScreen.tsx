@@ -10,13 +10,13 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/UserContext';
 import { userService } from '../../services/userService';
-import { ProfiloDto, Post } from '../../types';
+import { ProfiloDto, Post, MainStackParamList } from '../../types';
 
-// ─── Design tokens (fedeli al CSS Angular) ────────────────────────────────────
 const C = {
   bg: '#F1F5F9',
   card: '#FFFFFF',
@@ -33,15 +33,12 @@ const C = {
   warmBg: '#FFFBEB',
 } as const;
 
-// Banner gradient: brand-700 → indigo → dark-indigo (CSS Angular: 135deg)
 const BANNER_GRADIENT: [string, string, string] = ['#2B5BA8', '#312e81', '#1e1b4b'];
-// Avatar gradient fallback
 const AVATAR_GRADIENT: [string, string] = ['#6BA3E0', '#2B5BA8'];
 
 const AVATAR_SIZE = 108;
 const BANNER_H = 165;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 function getRuoloTag(ruolo?: string) {
   if (!ruolo) return { label: 'Utente', bg: '#F1F5F9', text: '#64748B', border: '#E2E8F0' };
   const r = ruolo.toUpperCase();
@@ -61,7 +58,6 @@ function formatDataOra(iso?: string): string {
   return new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 }
 
-// ─── Stat cell ───────────────────────────────────────────────────────────────
 function StatCell({ value, label }: { value: number; label: string }) {
   return (
     <View style={styles.statCell}>
@@ -71,7 +67,6 @@ function StatCell({ value, label }: { value: number; label: string }) {
   );
 }
 
-// ─── Post card (sidebar-vote style del frontend Angular) ─────────────────────
 function PostCard({ post }: { post: Post }) {
   return (
     <View style={styles.postCard}>
@@ -94,10 +89,10 @@ function PostCard({ post }: { post: Post }) {
   );
 }
 
-// ─── Main screen ─────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { profile, isLoading: profileLoading, loadProfile } = useProfile();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const route = useRoute();
   const paramUsername = (route.params as { username?: string } | undefined)?.username;
   const isOwnProfile = !paramUsername || paramUsername === user?.username;
@@ -109,7 +104,6 @@ export default function ProfileScreen() {
   const [seguito, setSeguito] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
-  // Profilo proprio → context; profilo altrui → stato locale
   const profilo: ProfiloDto | null = isOwnProfile
     ? (profile as ProfiloDto | null)
     : otherProfilo;
@@ -148,20 +142,19 @@ export default function ProfileScreen() {
       if (seguito) {
         await userService.unfollowUser(targetUsername);
         setSeguito(false);
-        setProfilo(p => p ? { ...p, numSeguaci: (p.numSeguaci ?? 1) - 1 } : p);
+        setOtherProfilo(p => p ? { ...p, numSeguaci: Math.max(0, (p.numSeguaci ?? 1) - 1) } : p);
       } else {
         await userService.followUser(targetUsername);
         setSeguito(true);
-        setProfilo(p => p ? { ...p, numSeguaci: (p.numSeguaci ?? 0) + 1 } : p);
+        setOtherProfilo(p => p ? { ...p, numSeguaci: (p.numSeguaci ?? 0) + 1 } : p);
       }
     } catch {
-      // nessuna modifica in caso di errore
+      // no change on error
     } finally {
       setFollowLoading(false);
     }
   }
 
-  // ── Loading ────────────────────────────────────────────────────────────────
   if (isCurrentlyLoading) {
     return (
       <View style={styles.centered}>
@@ -171,7 +164,6 @@ export default function ProfileScreen() {
     );
   }
 
-  // ── Error ─────────────────────────────────────────────────────────────────
   if (error) {
     return (
       <View style={styles.centered}>
@@ -188,11 +180,10 @@ export default function ProfileScreen() {
   const avatarLetter = (username[0] ?? '?').toUpperCase();
   const posts: Post[] = (profilo?.posts as Post[]) ?? [];
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
 
-      {/* ── Banner + Avatar ─────────────────────────────────────────────── */}
+      {/* Banner + Avatar */}
       <View style={styles.bannerContainer}>
         <LinearGradient
           colors={BANNER_GRADIENT}
@@ -200,11 +191,9 @@ export default function ProfileScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.banner}
         >
-          {/* orb decorativo (fedele al CSS Angular) */}
           <View style={styles.bannerOrb} />
         </LinearGradient>
 
-        {/* Avatar sovrapposto al banner */}
         <View style={styles.avatarOuter}>
           {profilo?.fotoProfilo ? (
             <Image source={{ uri: profilo.fotoProfilo }} style={styles.avatarImg} />
@@ -216,10 +205,9 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* ── Contenuto profilo ──────────────────────────────────────────── */}
       <View style={styles.content}>
 
-        {/* Nome, username, ruolo, logout */}
+        {/* Identity row */}
         <View style={styles.identityRow}>
           <View style={styles.identityLeft}>
             <Text style={styles.displayName}>{displayName}</Text>
@@ -229,9 +217,17 @@ export default function ProfileScreen() {
             </View>
           </View>
           {isOwnProfile ? (
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <Text style={styles.logoutBtnText}>Esci</Text>
-            </TouchableOpacity>
+            <View style={styles.ownActions}>
+              <TouchableOpacity
+                style={styles.editProfileBtn}
+                onPress={() => navigation.navigate('EditProfile')}
+              >
+                <Text style={styles.editProfileBtnText}>Modifica</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+                <Text style={styles.logoutBtnText}>Esci</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <TouchableOpacity
               style={[styles.followBtn, seguito && styles.followBtnActive]}
@@ -248,7 +244,7 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* ── Stats 2x2 ─────────────────────────────────────────────── */}
+        {/* Stats 2x2 */}
         <View style={styles.statsCard}>
           <View style={styles.statsGrid}>
             <StatCell value={profilo?.numPost ?? 0}    label="Post" />
@@ -263,7 +259,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* ── Bio ──────────────────────────────────────────────────── */}
+        {/* Bio */}
         {!!profilo?.bio && (
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Bio</Text>
@@ -271,7 +267,7 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* ── Membro dal ───────────────────────────────────────────── */}
+        {/* Membro dal */}
         <View style={styles.memberRow}>
           <Text style={styles.memberIcon}>🗓</Text>
           <Text style={styles.memberText}>
@@ -280,7 +276,7 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        {/* ── Post recenti ─────────────────────────────────────────── */}
+        {/* Post recenti */}
         <View style={styles.postsSection}>
           <View style={styles.postsSectionHeader}>
             <Text style={styles.sectionTitle}>Post</Text>
@@ -304,7 +300,6 @@ export default function ProfileScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
 
@@ -312,7 +307,6 @@ const styles = StyleSheet.create({
   loadingText: { color: C.textSoft, fontSize: 14 },
   errorText: { color: C.danger, fontSize: 14, textAlign: 'center' },
 
-  // Banner + Avatar
   bannerContainer: { position: 'relative' },
   banner: { height: BANNER_H },
   bannerOrb: {
@@ -341,19 +335,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   avatarImg: { width: '100%', height: '100%' },
-  avatarGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarLetter: {
-    color: '#fff',
-    fontSize: 42,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
+  avatarGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  avatarLetter: { color: '#fff', fontSize: 42, fontWeight: '800', letterSpacing: -1 },
 
-  // Content
   content: {
     paddingTop: AVATAR_SIZE / 2 + 16,
     paddingHorizontal: 16,
@@ -361,19 +345,13 @@ const styles = StyleSheet.create({
     gap: 14,
   },
 
-  // Identity row
   identityRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  identityLeft: { gap: 4 },
-  displayName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: C.text,
-    letterSpacing: -0.4,
-  },
+  identityLeft: { gap: 4, flex: 1 },
+  displayName: { fontSize: 22, fontWeight: '800', color: C.text, letterSpacing: -0.4 },
   usernameText: { fontSize: 14, color: C.textSoft },
   roleTag: {
     alignSelf: 'flex-start',
@@ -385,13 +363,21 @@ const styles = StyleSheet.create({
   },
   roleTagText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
 
+  ownActions: { gap: 8, alignItems: 'flex-end' },
+  editProfileBtn: {
+    backgroundColor: C.primary,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    marginTop: 4,
+  },
+  editProfileBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   logoutBtn: {
     borderWidth: 1.5,
     borderColor: C.danger,
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 7,
-    marginTop: 4,
   },
   logoutBtnText: { color: C.danger, fontSize: 13, fontWeight: '600' },
   followBtn: {
@@ -411,7 +397,6 @@ const styles = StyleSheet.create({
   followBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   followBtnTextActive: { color: C.primary },
 
-  // Stats card
   statsCard: {
     backgroundColor: C.card,
     borderRadius: 18,
@@ -438,7 +423,6 @@ const styles = StyleSheet.create({
   statDividerV: { width: 1, backgroundColor: C.border, marginVertical: 10 },
   statDividerH: { height: 1, backgroundColor: C.border },
 
-  // Section card
   sectionCard: {
     backgroundColor: C.card,
     borderRadius: 18,
@@ -454,24 +438,13 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 8 },
   bioText: { fontSize: 14, color: C.textSoft, lineHeight: 21 },
 
-  // Member
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 4,
-  },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
   memberIcon: { fontSize: 15 },
   memberText: { fontSize: 13, color: C.textSoft },
   memberDate: { fontWeight: '600', color: C.text },
 
-  // Posts section
   postsSection: { gap: 10 },
-  postsSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  postsSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   postsBadge: {
     backgroundColor: C.primary,
     borderRadius: 999,
@@ -492,7 +465,6 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 28 },
   emptyText: { fontSize: 14, color: C.textSoft },
 
-  // Post card (sidebar-vote style del frontend Angular)
   postCard: {
     backgroundColor: C.card,
     borderRadius: 14,

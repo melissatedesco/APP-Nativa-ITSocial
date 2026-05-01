@@ -45,7 +45,6 @@ export interface ProfiloDto {
   memberDal?: string;
 }
 
-// LoginResponse matches the actual backend response
 export interface LoginResponse {
   token: string;
   username: string;
@@ -86,7 +85,7 @@ export interface Post {
   contenuto: string;
   dataOra: string;
   numeroLike: number;
-  commenti: unknown[];
+  commenti: CommentoDto[];
   like: unknown[];
   allegati?: AllegatoDto[];
 }
@@ -113,11 +112,52 @@ export interface UpdateProfileData {
   cognome?: string;
   bio?: string;
   fotoProfilo?: string;
-  dataNascita?: string;   // formato "YYYY-MM-DD"
-  telefono?: string;      // pattern: cifre, +, spazi, trattini, parentesi (7-15 chars)
+  dataNascita?: string;
+  telefono?: string;
   indirizzo?: string;
 }
 
+// ─── Comments ─────────────────────────────────────────────────────────────────
+export interface CommentoDto {
+  idCommento: number;
+  utente: { id: number; username: string };
+  testo: string;
+  dataOra: string;
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+export interface NotificaDto {
+  id: number;
+  tipo: string;
+  attoreUsername: string;
+  attoreNome?: string;
+  messaggio: string;
+  letta: boolean;
+  createdAt: string;
+  idRiferimento: number;
+  tipoRiferimento: string;
+}
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+export interface MessaggioDto {
+  id: number;
+  mittente: { id: number; username: string; nome: string; cognome: string };
+  testo: string;
+  dataOra: string;
+  letto: boolean;
+  fissato?: boolean;
+  importante?: boolean;
+  replyTo?: MessaggioDto | null;
+}
+
+export interface ConversazioneDto {
+  altroUtente: { id: number; username: string; nome: string; cognome: string };
+  messaggi?: MessaggioDto[];
+  ultimoMessaggio?: MessaggioDto;
+  nonLetti: number;
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
@@ -131,10 +171,14 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   Search: undefined;
+  Notifications: undefined;
+  Messages: undefined;
   Profile: undefined;
 };
 
 export type MainStackParamList = {
   Tabs: undefined;
   UserProfile: { username: string };
+  EditProfile: undefined;
+  Chat: { username: string };
 };

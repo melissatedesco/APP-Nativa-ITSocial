@@ -1,24 +1,29 @@
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
+import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { MEDIA_BASE_URL } from '../../services/api';
-import { Post, MainStackParamList } from '../../types';
+import { commentoService } from '../../services/commentoService';
+import { Post, CommentoDto, MainStackParamList } from '../../types';
 import { useFeed, FeedTab } from '../../hooks/useFeed';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -37,6 +42,7 @@ const C = {
   warmBg: 'rgba(245,158,11,0.12)',
   danger: '#E53E3E',
   inputBg: '#F8FAFC',
+  saveBg: 'rgba(74,143,212,0.12)',
 } as const;
 
 const AVATAR_GRADIENT: [string, string] = ['#6BA3E0', '#2B5BA8'];
@@ -76,20 +82,142 @@ function Avatar({ name, size = 44 }: { name?: string; size?: number }) {
   );
 }
 
+// ─── CommentsSection ─────────────────────────────────────────────────────────
+function CommentsSection({
+  postId,
+  initialComments,
+  currentUsername,
+}: {
+  postId: number;
+  initialComments: CommentoDto[];
+  currentUsername: string;
+}) {
+  const [comments, setComments] = useState<CommentoDto[]>(initialComments);
+  const [loaded, setLoaded] = useState(initialComments.length > 0);
+  const [loading, setLoading] = useState(false);
+  const [newText, setNewText] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  async function loadComments() {
+    if (loaded) return;
+    setLoading(true);
+    try {
+      const data = await commentoService.getCommentiByPost(postId);
+      setComments(data);
+      setLoaded(true);
+    } catch {
+      // show empty
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Load on first render of the section
+  React.useEffect(() => { loadComments(); }, []);
+
+  async function handleAdd() {
+    if (!newText.trim() || adding) return;
+    setAdding(true);
+    try {
+      const c = await commentoService.creaCommento(postId, newText.trim());
+      setComments(prev => [...prev, c]);
+      setNewText('');
+    } catch {
+      Alert.alert('Errore', 'Impossibile aggiungere il commento.');
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  function handleDelete(idCommento: number, authorUsername: string) {
+    if (authorUsername !== currentUsername) return;
+    Alert.alert('Elimina commento', 'Sei sicuro?', [
+      { text: 'Annulla', style: 'cancel' },
+      {
+        text: 'Elimina', style: 'destructive', onPress: async () => {
+          try {
+            await commentoService.eliminaCommento(idCommento);
+            setComments(prev => prev.filter(c => c.idCommento !== idCommento));
+          } catch {
+            Alert.alert('Errore', 'Impossibile eliminare il commento.');
+          }
+        },
+      },
+    ]);
+  }
+
+  return (
+    <View style={styles.commentsSection}>
+      {loading && <ActivityIndicator size="small" color={C.primary} style={{ marginVertical: 8 }} />}
+      {comments.map(c => (
+        <TouchableOpacity
+          key={c.idCommento}
+          style={styles.commentRow}
+          onLongPress={() => handleDelete(c.idCommento, c.utente?.username ?? '')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.commentAvatar}>
+            <Text style={styles.commentAvatarText}>
+              {(c.utente?.username ?? '?')[0].toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.commentBody}>
+            <Text style={styles.commentAuthor}>@{c.utente?.username}</Text>
+            <Text style={styles.commentText}>{c.testo}</Text>
+          </View>
+        </TouchableOpacity>
+      ))}
+      <View style={styles.addCommentRow}>
+        <TextInput
+          style={styles.commentInput}
+          placeholder="Aggiungi un commento…"
+          placeholderTextColor={C.textMuted}
+          value={newText}
+          onChangeText={setNewText}
+          multiline={false}
+          returnKeyType="send"
+          onSubmitEditing={handleAdd}
+          editable={!adding}
+        />
+        <TouchableOpacity
+          style={[styles.commentSendBtn, (!newText.trim() || adding) && styles.commentSendBtnDisabled]}
+          onPress={handleAdd}
+          disabled={!newText.trim() || adding}
+        >
+          {adding
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Text style={styles.commentSendText}>↑</Text>
+          }
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 // ─── Post Card ───────────────────────────────────────────────────────────────
 function PostCard({
   post,
   liked,
+  saved,
   onLike,
+  onSave,
+  onDelete,
   onPressAuthor,
+  currentUsername,
 }: {
   post: Post;
   liked: boolean;
+  saved: boolean;
   onLike: (id: number) => void;
+  onSave: (id: number) => void;
+  onDelete: (id: number) => void;
   onPressAuthor: (username: string) => void;
+  currentUsername: string;
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const ruoloTag = getRuoloTag(post.ruoloUtente);
+  const [showComments, setShowComments] = useState(false);
+  const isOwn = post.usernameUtente === currentUsername;
 
   function handleLike() {
     Animated.sequence([
@@ -99,11 +227,18 @@ function PostCard({
     onLike(post.id);
   }
 
+  function handleDelete() {
+    Alert.alert('Elimina post', 'Sei sicuro di voler eliminare questo post?', [
+      { text: 'Annulla', style: 'cancel' },
+      { text: 'Elimina', style: 'destructive', onPress: () => onDelete(post.id) },
+    ]);
+  }
+
   const images = post.allegati?.filter(a => a.tipo === 'IMAGE') ?? [];
 
   return (
     <View style={styles.postCard}>
-      {/* Header — cliccabile per navigare al profilo */}
+      {/* Header */}
       <TouchableOpacity
         style={styles.postHeader}
         onPress={() => onPressAuthor(post.usernameUtente)}
@@ -125,6 +260,11 @@ function PostCard({
             @{post.usernameUtente}{'  ·  '}{timeAgo(post.dataOra)}
           </Text>
         </View>
+        {isOwn && (
+          <TouchableOpacity style={styles.deletePostBtn} onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.deletePostIcon}>✕</Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
 
       {/* Content */}
@@ -134,7 +274,7 @@ function PostCard({
       {images.length > 0 && (
         <View style={styles.imageContainer}>
           {images.map(a => (
-            <Image
+            <ExpoImage
               key={a.id}
               source={{ uri: MEDIA_BASE_URL + a.url }}
               style={images.length === 1 ? styles.postImageSingle : styles.postImageGrid}
@@ -163,43 +303,91 @@ function PostCard({
         </TouchableOpacity>
 
         {/* Commenti */}
-        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={[styles.actionBtn, showComments && styles.actionBtnActive]}
+          onPress={() => setShowComments(v => !v)}
+          activeOpacity={0.7}
+        >
           <Text style={styles.actionIcon}>💬</Text>
           <Text style={styles.actionCount}>{post.commenti?.length ?? 0}</Text>
         </TouchableOpacity>
 
-        {/* Condividi */}
-        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-          <Text style={styles.actionIcon}>↗</Text>
+        {/* Salva */}
+        <TouchableOpacity
+          style={[styles.actionBtn, saved && styles.actionBtnSaved]}
+          onPress={() => onSave(post.id)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.actionIcon, saved && styles.actionIconSaved]}>
+            {saved ? '🔖' : '🔖'}
+          </Text>
+          <Text style={[styles.actionCount, saved && styles.actionCountSaved]}>
+            {saved ? 'Salvato' : 'Salva'}
+          </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Comments section (lazy) */}
+      {showComments && (
+        <CommentsSection
+          postId={post.id}
+          initialComments={Array.isArray(post.commenti) ? post.commenti as CommentoDto[] : []}
+          currentUsername={currentUsername}
+        />
+      )}
     </View>
   );
 }
 
-// ─── Composer (create post) ───────────────────────────────────────────────────
+// ─── Composer ────────────────────────────────────────────────────────────────
 function Composer({
   username,
   onPublish,
 }: {
   username: string;
-  onPublish: (text: string) => Promise<void>;
+  onPublish: (text: string, imageUris?: string[]) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
 
+  async function pickImages() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permesso richiesto', 'Abilita l\'accesso alla galleria nelle impostazioni.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      quality: 0.85,
+      selectionLimit: 5,
+    });
+    if (!result.canceled) {
+      const uris = result.assets.map(a => a.uri);
+      setImages(prev => [...prev, ...uris].slice(0, 5));
+    }
+  }
+
+  function removeImage(index: number) {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  }
+
   async function handlePublish() {
-    if (!text.trim()) return;
+    if (!text.trim() && images.length === 0) return;
     setPublishing(true);
     try {
-      await onPublish(text.trim());
+      await onPublish(text.trim(), images.length > 0 ? images : undefined);
       setText('');
+      setImages([]);
       setOpen(false);
     } finally {
       setPublishing(false);
     }
   }
+
+  const canPublish = (text.trim().length > 0 || images.length > 0) && !publishing;
 
   return (
     <View style={styles.composer}>
@@ -220,19 +408,43 @@ function Composer({
             autoFocus
             maxLength={500}
           />
+
+          {/* Image previews */}
+          {images.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewRow}>
+              {images.map((uri, i) => (
+                <View key={i} style={styles.imagePreviewWrap}>
+                  <Image source={{ uri }} style={styles.imagePreview} />
+                  <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(i)}>
+                    <Text style={styles.imageRemoveText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
           <View style={styles.composerFooter}>
-            <Text style={styles.composerCounter}>{text.length}/500</Text>
+            <View style={styles.composerLeft}>
+              <TouchableOpacity
+                style={[styles.attachBtn, images.length >= 5 && styles.attachBtnDisabled]}
+                onPress={pickImages}
+                disabled={images.length >= 5}
+              >
+                <Text style={styles.attachBtnText}>📷 {images.length > 0 ? `${images.length}/5` : 'Foto'}</Text>
+              </TouchableOpacity>
+              <Text style={styles.composerCounter}>{text.length}/500</Text>
+            </View>
             <View style={styles.composerActions}>
               <TouchableOpacity
                 style={styles.composerCancel}
-                onPress={() => { setOpen(false); setText(''); }}
+                onPress={() => { setOpen(false); setText(''); setImages([]); }}
               >
                 <Text style={styles.composerCancelText}>Annulla</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.composerPublish, (!text.trim() || publishing) && styles.composerPublishDisabled]}
+                style={[styles.composerPublish, !canPublish && styles.composerPublishDisabled]}
                 onPress={handlePublish}
-                disabled={!text.trim() || publishing}
+                disabled={!canPublish}
               >
                 {publishing
                   ? <ActivityIndicator size="small" color="#fff" />
@@ -254,6 +466,7 @@ export default function HomeScreen() {
   const {
     posts,
     likedIds,
+    savedIds,
     tab,
     isLoading,
     isRefreshing,
@@ -261,12 +474,15 @@ export default function HomeScreen() {
     changeTab,
     refresh,
     toggleLike,
+    toggleSave,
+    deletePost,
     publishPost,
   } = useFeed();
 
+  const currentUsername = user?.username ?? '';
+
   const ListHeader = (
     <View>
-      {/* Tab filter */}
       <View style={styles.tabBar}>
         {(['pertе', 'seguiti'] as FeedTab[]).map((t) => (
           <TouchableOpacity
@@ -282,12 +498,10 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* Composer */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Composer username={user?.username ?? '?'} onPublish={publishPost} />
+        <Composer username={currentUsername} onPublish={publishPost} />
       </KeyboardAvoidingView>
 
-      {/* Publish error banner */}
       {publishError && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{publishError}</Text>
@@ -325,8 +539,12 @@ export default function HomeScreen() {
         <PostCard
           post={item}
           liked={likedIds.has(item.id)}
+          saved={savedIds.has(item.id)}
           onLike={toggleLike}
+          onSave={toggleSave}
+          onDelete={deletePost}
           onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
+          currentUsername={currentUsername}
         />
       )}
       ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
@@ -339,11 +557,9 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
   listContent: { paddingBottom: 32 },
 
-  // Avatar
   avatar: { justifyContent: 'center', alignItems: 'center' },
   avatarLetter: { color: '#fff', fontWeight: '800', letterSpacing: -0.5 },
 
-  // Tab bar
   tabBar: {
     flexDirection: 'row',
     backgroundColor: C.card,
@@ -397,11 +613,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
   },
+  imagePreviewRow: { flexDirection: 'row', marginBottom: 4 },
+  imagePreviewWrap: { marginRight: 8, position: 'relative' },
+  imagePreview: { width: 72, height: 72, borderRadius: 10, backgroundColor: C.border },
+  imageRemoveBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 999,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageRemoveText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   composerFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  composerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  attachBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.inputBg,
+  },
+  attachBtnDisabled: { opacity: 0.4 },
+  attachBtnText: { fontSize: 12, color: C.textSoft, fontWeight: '600' },
   composerCounter: { fontSize: 12, color: C.textMuted },
   composerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   composerCancel: {
@@ -426,7 +668,6 @@ const styles = StyleSheet.create({
   composerPublishDisabled: { opacity: 0.5 },
   composerPublishText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
-  // Feed loading
   feedLoading: { paddingVertical: 24, alignItems: 'center' },
 
   // Post card
@@ -455,7 +696,12 @@ const styles = StyleSheet.create({
   postAuthorName: { fontSize: 14, fontWeight: '700', color: C.text, flexShrink: 1 },
   postMeta: { fontSize: 12, color: C.textMuted },
 
-  // Role tag
+  deletePostBtn: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  deletePostIcon: { fontSize: 13, color: C.textMuted },
+
   roleTag: {
     borderWidth: 1,
     borderRadius: 999,
@@ -464,7 +710,6 @@ const styles = StyleSheet.create({
   },
   roleTagText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.2 },
 
-  // Post content
   postContent: {
     fontSize: 14,
     color: C.text,
@@ -474,7 +719,6 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
 
-  // Images
   imageContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -514,6 +758,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 999,
   },
+  actionBtnActive: {
+    backgroundColor: 'rgba(74,143,212,0.08)',
+  },
+  actionBtnSaved: {
+    backgroundColor: C.saveBg,
+  },
   actionIcon: { fontSize: 16, color: C.textSoft },
   actionIconStar: { color: C.textSoft },
   actionIconLikedStar: {
@@ -522,10 +772,66 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
+  actionIconSaved: { color: C.primary },
   actionCount: { fontSize: 13, color: C.textSoft, fontWeight: '500' },
   actionCountLiked: { color: C.warm, fontWeight: '700' },
+  actionCountSaved: { color: C.primary, fontWeight: '600' },
 
-  // Publish error banner
+  // Comments section
+  commentsSection: {
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  commentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 6,
+  },
+  commentAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  commentAvatarText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  commentBody: { flex: 1 },
+  commentAuthor: { fontSize: 11, fontWeight: '700', color: C.text },
+  commentText: { fontSize: 13, color: C.textSoft, lineHeight: 18 },
+  addCommentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  commentInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: C.inputBg,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.border,
+    fontSize: 13,
+    color: C.text,
+  },
+  commentSendBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: C.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  commentSendBtnDisabled: { opacity: 0.4 },
+  commentSendText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
+  // Error banner
   errorBanner: {
     marginHorizontal: 12,
     marginTop: 8,
