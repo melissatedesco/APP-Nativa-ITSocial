@@ -2,10 +2,8 @@ import { api } from './api';
 import { CommentoDto } from '../types';
 
 export const commentoService = {
-  async getCommentiByPost(idPost: number): Promise<CommentoDto[]> {
-    const { data } = await api.get<CommentoDto[]>(`/commenti/post/${idPost}`);
-    return data;
-  },
+  // Comments are embedded in the Post DTO — use post.commenti directly.
+  // No GET /commenti/post/{id} endpoint exists on the backend.
 
   async creaCommento(idPost: number, testo: string): Promise<CommentoDto> {
     const { data } = await api.post<CommentoDto>('/commenti', { idPost, testo });

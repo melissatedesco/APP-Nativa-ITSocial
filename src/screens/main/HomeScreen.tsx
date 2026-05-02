@@ -93,27 +93,9 @@ function CommentsSection({
   currentUsername: string;
 }) {
   const [comments, setComments] = useState<CommentoDto[]>(initialComments);
-  const [loaded, setLoaded] = useState(initialComments.length > 0);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [newText, setNewText] = useState('');
   const [adding, setAdding] = useState(false);
-
-  async function loadComments() {
-    if (loaded) return;
-    setLoading(true);
-    try {
-      const data = await commentoService.getCommentiByPost(postId);
-      setComments(data);
-      setLoaded(true);
-    } catch {
-      // show empty
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Load on first render of the section
-  React.useEffect(() => { loadComments(); }, []);
 
   async function handleAdd() {
     if (!newText.trim() || adding) return;

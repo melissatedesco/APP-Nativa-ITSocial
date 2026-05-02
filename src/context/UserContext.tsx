@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import axios from 'axios';
-import { UserProfile, UpdateProfileData } from '../types';
+import { ProfiloDto, UpdateProfileData } from '../types';
 import { userService } from '../services/userService';
 
 // Converts raw Axios/network errors into readable Italian messages for the UI.
@@ -23,24 +23,24 @@ function parseProfileError(err: unknown): Error {
 }
 
 interface ProfileContextValue {
-  profile: UserProfile | null;
+  profile: ProfiloDto | null;
   isLoading: boolean;
   isSaving: boolean;
-  loadProfile: (userId: string) => Promise<void>;
+  loadProfile: (username: string) => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
 }
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<ProfiloDto | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  async function loadProfile(userId: string): Promise<void> {
+  async function loadProfile(username: string): Promise<void> {
     setIsLoading(true);
     try {
-      const fetched = await userService.getProfile(userId);
+      const fetched = await userService.getProfileByUsername(username);
       setProfile(fetched);
     } catch (err) {
       throw parseProfileError(err);

@@ -104,9 +104,7 @@ export default function ProfileScreen() {
   const [seguito, setSeguito] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
-  const profilo: ProfiloDto | null = isOwnProfile
-    ? (profile as ProfiloDto | null)
-    : otherProfilo;
+  const profilo: ProfiloDto | null = isOwnProfile ? profile : otherProfilo;
   const isCurrentlyLoading = isOwnProfile ? profileLoading : loading;
 
   useEffect(() => {

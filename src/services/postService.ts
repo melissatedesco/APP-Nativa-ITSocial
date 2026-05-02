@@ -43,6 +43,11 @@ export const postService = {
     return data;
   },
 
+  async updatePost(id: number, contenuto: string): Promise<Post> {
+    const { data } = await api.put<Post>('/post', { id, contenuto });
+    return data;
+  },
+
   async deletePost(id: number): Promise<void> {
     await api.delete(`/post/elimina/${id}`);
   },

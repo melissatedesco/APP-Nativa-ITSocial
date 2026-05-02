@@ -3,6 +3,7 @@ import axios from 'axios';
 import { LoginResponse, LoginCredentials, RegisterData } from '../types';
 import { authService } from '../services/authService';
 import { storage } from '../utils/storage';
+import { authEvents } from '../utils/authEvents';
 
 // Converts raw Axios/network errors into readable Italian messages for the UI.
 function parseAuthError(err: unknown): Error {
@@ -42,20 +43,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Wire auto-logout: api.ts emits this event on 401 / expired JWT.
+  useEffect(() => {
+    authEvents.setOnAuthError(async () => {
+      await storage.clearAuth();
+      setToken(null);
+      setUser(null);
+    });
+    return () => authEvents.clearOnAuthError();
+  }, []);
+
   // On mount: restore persisted session so the user stays logged in after app restart.
   useEffect(() => {
+    console.log('[AuthContext] avvio ripristino sessione');
+    // Safety net: if storage hangs for any reason, unblock the UI after 3 s.
+    const timeout = setTimeout(() => {
+      console.warn('[AuthContext] timeout storage – sblocco UI');
+      setIsLoading(false);
+    }, 3000);
+
     (async () => {
       try {
         const [savedToken, savedUser] = await Promise.all([
           storage.getToken(),
           storage.getUser<LoginResponse>(),
         ]);
+        console.log('[AuthContext] storage letto – token:', !!savedToken, 'user:', !!savedUser);
         if (savedToken && savedUser) {
           setToken(savedToken);
           setUser(savedUser);
         }
+      } catch (e) {
+        console.error('[AuthContext] errore lettura storage:', e);
       } finally {
-        // Always clear the loading state, even if storage fails.
+        clearTimeout(timeout);
         setIsLoading(false);
       }
     })();

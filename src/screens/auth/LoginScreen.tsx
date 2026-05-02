@@ -36,6 +36,7 @@ type Props = {
 };
 
 export default function LoginScreen({ navigation }: Props) {
+  console.log('[LoginScreen] montato');
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -165,6 +166,7 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
 
         </View>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
