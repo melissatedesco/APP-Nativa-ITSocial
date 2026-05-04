@@ -23,7 +23,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { MEDIA_BASE_URL } from '../../services/api';
 import { commentoService } from '../../services/commentoService';
-import { Post, CommentoDto, MainStackParamList } from '../../types';
+import { sondaggioService } from '../../services/sondaggioService';
+import { Post, CommentoDto, SondaggioDto, MainStackParamList } from '../../types';
 import { useFeed, FeedTab } from '../../hooks/useFeed';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -176,6 +177,102 @@ function CommentsSection({
   );
 }
 
+// ─── Poll Section ────────────────────────────────────────────────────────────
+function PollSection({ initialSondaggio }: { initialSondaggio: SondaggioDto }) {
+  const [sondaggio, setSondaggio] = useState<SondaggioDto>(initialSondaggio);
+  const [voting, setVoting] = useState(false);
+
+  const hasVoted = sondaggio.idOpzioneVotata != null;
+  const showResults = hasVoted || sondaggio.scaduto;
+
+  function scadenzaLabel(): string {
+    if (sondaggio.scaduto) return 'Scaduto';
+    if (!sondaggio.scadenza) return '';
+    const diff = new Date(sondaggio.scadenza).getTime() - Date.now();
+    const h = Math.floor(diff / 3600000);
+    if (h < 1) return 'Scade tra meno di 1h';
+    if (h < 24) return `Scade tra ${h}h`;
+    return `Scade tra ${Math.floor(h / 24)}g`;
+  }
+
+  async function handleVote(idOpzione: number) {
+    if (showResults || voting) return;
+    setVoting(true);
+    // Optimistic update
+    setSondaggio(prev => {
+      const totale = (prev.totaleVoti ?? 0) + 1;
+      const opzioni = prev.opzioni.map(o => {
+        const voti = o.idOpzione === idOpzione ? o.numVoti + 1 : o.numVoti;
+        return { ...o, numVoti: voti, percentuale: Math.round((voti / totale) * 100) };
+      });
+      return { ...prev, totaleVoti: totale, idOpzioneVotata: idOpzione, opzioni };
+    });
+    try {
+      const updated = await sondaggioService.vota(idOpzione);
+      setSondaggio(updated);
+    } catch {
+      // rollback on error
+      setSondaggio(initialSondaggio);
+      Alert.alert('Errore', 'Impossibile registrare il voto. Riprova.');
+    } finally {
+      setVoting(false);
+    }
+  }
+
+  return (
+    <View style={styles.pollSection}>
+      <Text style={styles.pollQuestion}>{sondaggio.domanda}</Text>
+
+      <View style={styles.pollOptions}>
+        {sondaggio.opzioni.map(opzione => {
+          const isVoted = sondaggio.idOpzioneVotata === opzione.idOpzione;
+          const pct = opzione.percentuale ?? 0;
+
+          if (showResults) {
+            return (
+              <View key={opzione.idOpzione} style={styles.pollResultRow}>
+                <View style={styles.pollBarWrap}>
+                  <View style={[styles.pollBar, { width: `${pct}%` as any }, isVoted && styles.pollBarVoted]} />
+                  <View style={styles.pollBarLabel}>
+                    <Text style={[styles.pollOptionText, isVoted && styles.pollOptionTextVoted]}>
+                      {isVoted ? '✓ ' : ''}{opzione.testo}
+                    </Text>
+                    <Text style={styles.pollPct}>{pct}%</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          }
+
+          return (
+            <TouchableOpacity
+              key={opzione.idOpzione}
+              style={styles.pollVoteBtn}
+              onPress={() => handleVote(opzione.idOpzione)}
+              disabled={voting}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.pollVoteBtnText}>{opzione.testo}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <View style={styles.pollMeta}>
+        <Text style={styles.pollMetaText}>{sondaggio.totaleVoti} voti</Text>
+        {scadenzaLabel() !== '' && (
+          <>
+            <Text style={styles.pollMetaDot}>·</Text>
+            <Text style={[styles.pollMetaText, sondaggio.scaduto && styles.pollMetaScaduto]}>
+              {scadenzaLabel()}
+            </Text>
+          </>
+        )}
+      </View>
+    </View>
+  );
+}
+
 // ─── Post Card ───────────────────────────────────────────────────────────────
 function PostCard({
   post,
@@ -266,6 +363,11 @@ function PostCard({
         </View>
       )}
 
+      {/* Poll */}
+      {post.sondaggio && (
+        <PollSection initialSondaggio={post.sondaggio} />
+      )}
+
       {/* Actions */}
       <View style={styles.postActions}>
         {/* Like */}
@@ -291,7 +393,7 @@ function PostCard({
           activeOpacity={0.7}
         >
           <Text style={styles.actionIcon}>💬</Text>
-          <Text style={styles.actionCount}>{post.commenti?.length ?? 0}</Text>
+          <Text style={styles.actionCount}>{post.numeroCommenti ?? post.commenti?.length ?? 0}</Text>
         </TouchableOpacity>
 
         {/* Salva */}
@@ -452,9 +554,11 @@ export default function HomeScreen() {
     tab,
     isLoading,
     isRefreshing,
+    isLoadingMore,
     publishError,
     changeTab,
     refresh,
+    loadMore,
     toggleLike,
     toggleSave,
     deletePost,
@@ -466,7 +570,7 @@ export default function HomeScreen() {
   const ListHeader = (
     <View>
       <View style={styles.tabBar}>
-        {(['pertе', 'seguiti'] as FeedTab[]).map((t) => (
+        {(['pertе', 'seguiti', 'tendenze'] as FeedTab[]).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
@@ -474,7 +578,7 @@ export default function HomeScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.tabBtnText, tab === t && styles.tabBtnTextActive]}>
-              {t === 'pertе' ? 'Per te' : 'Seguiti'}
+              {t === 'pertе' ? 'Per te' : t === 'seguiti' ? 'Seguiti' : '🔥 Tendenze'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -508,12 +612,21 @@ export default function HomeScreen() {
         <RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={C.primary} />
       }
       ListHeaderComponent={ListHeader}
+      onEndReached={loadMore}
+      onEndReachedThreshold={0.4}
       ListEmptyComponent={
         !isLoading ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>📭</Text>
             <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
             <Text style={styles.emptySubtitle}>Sii il primo a pubblicare qualcosa!</Text>
+          </View>
+        ) : null
+      }
+      ListFooterComponent={
+        isLoadingMore ? (
+          <View style={styles.loadingMore}>
+            <ActivityIndicator color={C.primary} size="small" />
           </View>
         ) : null
       }
@@ -825,6 +938,65 @@ const styles = StyleSheet.create({
     borderColor: '#FECACA',
   },
   errorBannerText: { fontSize: 13, color: '#B91C1C', fontWeight: '500' },
+
+  loadingMore: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+
+  // Poll
+  pollSection: {
+    marginHorizontal: 14,
+    marginBottom: 10,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 14,
+    gap: 10,
+  },
+  pollQuestion: { fontSize: 14, fontWeight: '700', color: C.text, lineHeight: 20 },
+  pollOptions: { gap: 8 },
+  pollVoteBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: C.primary,
+    alignItems: 'center',
+  },
+  pollVoteBtnText: { fontSize: 13, fontWeight: '600', color: C.primary },
+  pollResultRow: { gap: 4 },
+  pollBarWrap: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: C.border,
+    height: 34,
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  pollBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(74,143,212,0.18)',
+    borderRadius: 8,
+  },
+  pollBarVoted: { backgroundColor: 'rgba(74,143,212,0.32)' },
+  pollBarLabel: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  pollOptionText: { fontSize: 13, color: C.textSoft, fontWeight: '500' },
+  pollOptionTextVoted: { color: C.primary, fontWeight: '700' },
+  pollPct: { fontSize: 12, fontWeight: '700', color: C.textSoft },
+  pollMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pollMetaText: { fontSize: 11, color: C.textMuted },
+  pollMetaDot: { fontSize: 11, color: C.textMuted },
+  pollMetaScaduto: { color: C.danger },
 
   // Empty state
   emptyState: {

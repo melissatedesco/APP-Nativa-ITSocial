@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { storage } from '../utils/storage';
 import { authEvents } from '../utils/authEvents';
+import { HOST, API_BASE_URL } from '../config';
 
-const HOST = 'http://192.168.1.100:8080';
 export const MEDIA_BASE_URL = HOST;
-const BASE_URL = `${HOST}/api`;
+const BASE_URL = API_BASE_URL;
 
 console.log('🌐 API Base URL:', BASE_URL);
 

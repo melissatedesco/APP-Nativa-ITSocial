@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -42,25 +42,29 @@ export default function SearchScreen() {
   const [results, setResults] = useState<ProfiloDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function handleSearch(text: string) {
+  function handleSearch(text: string) {
     setQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (text.length < 2) {
       setResults([]);
       setError('');
       return;
     }
-    setLoading(true);
-    setError('');
-    try {
-      const users = await userService.searchUsers(text);
-      setResults(users);
-    } catch {
-      setError('Errore durante la ricerca. Riprova.');
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const users = await userService.searchUsers(text);
+        setResults(users);
+      } catch {
+        setError('Errore durante la ricerca. Riprova.');
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
   }
 
   function handleClear() {

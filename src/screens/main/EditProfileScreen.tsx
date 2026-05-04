@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -12,12 +11,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/UserContext';
-import { userService } from '../../services/userService';
 
 const C = {
   bg: '#F1F5F9',
@@ -45,9 +42,8 @@ export default function EditProfileScreen() {
   const [nome, setNome] = useState('');
   const [cognome, setCognome] = useState('');
   const [bio, setBio] = useState('');
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [fotoProfilo, setFotoProfilo] = useState('');
   const [saving, setSaving] = useState(false);
-  const [savingPhoto, setSavingPhoto] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -62,28 +58,12 @@ export default function EditProfileScreen() {
       setNome(profile.nome ?? '');
       setCognome(profile.cognome ?? '');
       setBio(profile.bio ?? '');
+      setFotoProfilo(profile.fotoProfilo ?? '');
     } else if (user) {
       setNome(user.nome ?? '');
       setCognome(user.cognome ?? '');
     }
   }, [profile]);
-
-  async function pickPhoto() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permesso richiesto', 'Abilita l\'accesso alla galleria nelle impostazioni.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
-    }
-  }
 
   async function handleSave() {
     if (!nome.trim() || !cognome.trim()) {
@@ -95,26 +75,11 @@ export default function EditProfileScreen() {
     setSuccess(false);
 
     try {
-      // Upload photo first if selected
-      if (photoUri) {
-        setSavingPhoto(true);
-        try {
-          await userService.updateProfilePhoto(photoUri);
-          setSavingPhoto(false);
-        } catch {
-          setSavingPhoto(false);
-          Alert.alert(
-            'Foto non aggiornata',
-            'Il caricamento della foto ha fallito. Gli altri dati verranno comunque salvati.',
-          );
-        }
-      }
-
-      // Update text fields
       await updateProfile({
         nome: nome.trim(),
         cognome: cognome.trim(),
         bio: bio.trim() || undefined,
+        fotoProfilo: fotoProfilo.trim() || undefined,
       });
 
       setSuccess(true);
@@ -128,7 +93,7 @@ export default function EditProfileScreen() {
     }
   }
 
-  const currentPhoto = photoUri ?? profile?.fotoProfilo ?? null;
+  const currentPhoto = fotoProfilo.trim() || profile?.fotoProfilo || null;
   const displayInitial = ((nome || user?.nome || '?')[0]).toUpperCase();
 
   return (
@@ -145,7 +110,7 @@ export default function EditProfileScreen() {
 
         {/* Avatar */}
         <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={pickPhoto} style={styles.avatarWrap} activeOpacity={0.8}>
+          <View style={styles.avatarWrap}>
             {currentPhoto ? (
               <Image source={{ uri: currentPhoto }} style={styles.avatarImg} />
             ) : (
@@ -153,11 +118,8 @@ export default function EditProfileScreen() {
                 <Text style={styles.avatarLetter}>{displayInitial}</Text>
               </LinearGradient>
             )}
-            <View style={styles.avatarEditOverlay}>
-              <Text style={styles.avatarEditIcon}>📷</Text>
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.avatarHint}>Tocca per cambiare foto</Text>
+          </View>
+          <Text style={styles.avatarHint}>Inserisci un URL foto nel campo sottostante</Text>
         </View>
 
         {/* Form */}
@@ -190,6 +152,20 @@ export default function EditProfileScreen() {
           </View>
 
           <View style={styles.field}>
+            <Text style={styles.label}>Foto profilo (URL)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="https://esempio.com/mia-foto.jpg"
+              placeholderTextColor={C.textMuted}
+              value={fotoProfilo}
+              onChangeText={v => { setFotoProfilo(v); setError(''); }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+            />
+          </View>
+
+          <View style={styles.field}>
             <Text style={styles.label}>Bio</Text>
             <TextInput
               style={[styles.input, styles.bioInput]}
@@ -198,10 +174,10 @@ export default function EditProfileScreen() {
               value={bio}
               onChangeText={v => { setBio(v); setError(''); }}
               multiline
-              maxLength={300}
+              maxLength={160}
               textAlignVertical="top"
             />
-            <Text style={styles.charCount}>{bio.length}/300</Text>
+            <Text style={styles.charCount}>{bio.length}/160</Text>
           </View>
 
           {error !== '' && (
@@ -225,9 +201,7 @@ export default function EditProfileScreen() {
             {saving ? (
               <>
                 <ActivityIndicator size="small" color="#fff" />
-                <Text style={styles.saveBtnText}>
-                  {savingPhoto ? 'Caricamento foto…' : 'Salvataggio…'}
-                </Text>
+                <Text style={styles.saveBtnText}>Salvataggio…</Text>
               </>
             ) : (
               <Text style={styles.saveBtnText}>Salva modifiche</Text>
@@ -273,17 +247,6 @@ const styles = StyleSheet.create({
   avatarImg: { width: '100%', height: '100%' },
   avatarGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   avatarLetter: { color: '#fff', fontSize: 36, fontWeight: '800' },
-  avatarEditOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: AVATAR_SIZE * 0.32,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarEditIcon: { fontSize: 16 },
   avatarHint: { fontSize: 12, color: C.textSoft },
 
   formCard: {

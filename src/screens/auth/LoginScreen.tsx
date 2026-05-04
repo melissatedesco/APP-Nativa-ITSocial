@@ -10,7 +10,6 @@ import {
   Platform,
   ScrollView,
   Image,
-  Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
@@ -113,7 +112,7 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={styles.field}>
             <View style={styles.pwLabelRow}>
               <Text style={styles.label}>Password</Text>
-              <TouchableOpacity onPress={() => Alert.alert('Reset password', 'Usa la sezione "Password dimenticata" sul sito web.')}>
+              <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                 <Text style={styles.forgotLink}>Password dimenticata?</Text>
               </TouchableOpacity>
             </View>

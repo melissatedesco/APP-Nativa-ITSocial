@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { messaggiService } from '../../services/messaggiService';
 import { ConversazioneDto, MessaggioDto } from '../../types';
@@ -270,9 +270,17 @@ function ChatView({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function MessaggiScreen() {
   const { user } = useAuth();
-  const [view, setView] = useState<ScreenView>('list');
+  const navigation = useNavigation();
+  const route = useRoute();
+  const routeUsername = (route.params as { username?: string } | undefined)?.username ?? null;
+
+  const [view, setView] = useState<ScreenView>(routeUsername ? 'chat' : 'list');
   const [conversations, setConversations] = useState<ConversazioneDto[]>([]);
-  const [activeConv, setActiveConv] = useState<ConversazioneDto | null>(null);
+  const [activeConv, setActiveConv] = useState<ConversazioneDto | null>(
+    routeUsername
+      ? { altroUtente: { id: 0, username: routeUsername, nome: routeUsername, cognome: '' }, nonLetti: 0 }
+      : null
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -308,6 +316,7 @@ export default function MessaggiScreen() {
   }
 
   function goBack() {
+    if (routeUsername) { navigation.goBack(); return; }
     setView('list');
     setActiveConv(null);
     loadConversazioni();

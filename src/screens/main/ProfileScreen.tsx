@@ -222,6 +222,12 @@ export default function ProfileScreen() {
               >
                 <Text style={styles.editProfileBtnText}>Modifica</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.savedBtn}
+                onPress={() => navigation.navigate('SavedPosts')}
+              >
+                <Text style={styles.savedBtnText}>🔖 Salvati</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                 <Text style={styles.logoutBtnText}>Esci</Text>
               </TouchableOpacity>
@@ -370,6 +376,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   editProfileBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  savedBtn: {
+    borderWidth: 1.5,
+    borderColor: C.primary,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+  },
+  savedBtnText: { color: C.primary, fontSize: 13, fontWeight: '600' },
   logoutBtn: {
     borderWidth: 1.5,
     borderColor: C.danger,

@@ -85,9 +85,11 @@ export interface Post {
   contenuto: string;
   dataOra: string;
   numeroLike: number;
+  numeroCommenti?: number;
   commenti: CommentoDto[];
   like: unknown[];
   allegati?: AllegatoDto[];
+  sondaggio?: SondaggioDto | null;
 }
 
 export interface UserProfile {
@@ -115,6 +117,24 @@ export interface UpdateProfileData {
   dataNascita?: string;
   telefono?: string;
   indirizzo?: string;
+}
+
+// ─── Polls ────────────────────────────────────────────────────────────────────
+export interface OpzioneDto {
+  idOpzione: number;
+  testo: string;
+  numVoti: number;
+  percentuale: number;
+}
+
+export interface SondaggioDto {
+  idSondaggio: number;
+  domanda: string;
+  scadenza?: string;
+  scaduto: boolean;
+  totaleVoti: number;
+  opzioni: OpzioneDto[];
+  idOpzioneVotata?: number | null;
 }
 
 // ─── Comments ─────────────────────────────────────────────────────────────────
@@ -166,6 +186,9 @@ export type RootStackParamList = {
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
+  VerificaCodice: undefined;
+  NuovaPassword: { codice: string };
 };
 
 export type MainTabParamList = {
@@ -181,4 +204,5 @@ export type MainStackParamList = {
   UserProfile: { username: string };
   EditProfile: undefined;
   Chat: { username: string };
+  SavedPosts: undefined;
 };

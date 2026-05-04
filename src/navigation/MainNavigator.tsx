@@ -9,6 +9,7 @@ import ProfileScreen from '../screens/main/ProfileScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
 import MessaggiScreen from '../screens/main/MessaggiScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
+import SavedPostsScreen from '../screens/main/SavedPostsScreen';
 import { notificaService } from '../services/notificaService';
 import { messaggiService } from '../services/messaggiService';
 
@@ -164,7 +165,12 @@ export default function MainNavigator() {
       <Stack.Screen
         name="Chat"
         component={MessaggiScreen}
-        options={{ title: 'Conversazione', headerBackTitle: 'Indietro' }}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SavedPosts"
+        component={SavedPostsScreen}
+        options={{ title: 'Post salvati', headerBackTitle: 'Indietro' }}
       />
     </Stack.Navigator>
   );

@@ -6,7 +6,9 @@ import { postService } from '../services/postService';
 import { likeService } from '../services/likeService';
 import { salvataggioService } from '../services/salvataggioService';
 
-export type FeedTab = 'pertе' | 'seguiti';
+export type FeedTab = 'pertе' | 'seguiti' | 'tendenze';
+
+const PAGE_SIZE = 20;
 
 function parsePostError(err: unknown): string {
   if (axios.isAxiosError(err)) {
@@ -28,9 +30,12 @@ export interface UseFeedReturn {
   tab: FeedTab;
   isLoading: boolean;
   isRefreshing: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
   publishError: string | null;
   changeTab: (newTab: FeedTab) => void;
   refresh: () => void;
+  loadMore: () => void;
   toggleLike: (postId: number) => void;
   toggleSave: (postId: number) => void;
   deletePost: (postId: number) => Promise<void>;
@@ -42,18 +47,35 @@ export function useFeed(): UseFeedReturn {
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
   const [tab, setTab] = useState<FeedTab>('pertе');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
 
-  async function fetchPosts(currentTab: FeedTab): Promise<void> {
+  async function fetchPosts(currentTab: FeedTab, pg: number, append: boolean): Promise<void> {
     try {
-      const data = currentTab === 'seguiti'
-        ? await postService.getFeedSeguiti()
-        : await postService.getFeed();
-      setPosts(Array.isArray(data) ? data : []);
+      let data: Post[];
+      if (currentTab === 'seguiti') {
+        data = await postService.getFeedSeguiti();
+      } else if (currentTab === 'tendenze') {
+        data = await postService.getTrending(20);
+      } else {
+        data = await postService.getFeed(pg, PAGE_SIZE);
+      }
+      const arr = Array.isArray(data) ? data : [];
+      if (append) {
+        setPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          return [...prev, ...arr.filter(p => !existingIds.has(p.id))];
+        });
+      } else {
+        setPosts(arr);
+      }
+      setHasMore(currentTab === 'pertе' && arr.length === PAGE_SIZE);
     } catch {
-      setPosts([]);
+      if (!append) setPosts([]);
     }
   }
 
@@ -78,7 +100,7 @@ export function useFeed(): UseFeedReturn {
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      await Promise.all([fetchPosts(tab), fetchLikedIds(), fetchSavedIds()]);
+      await Promise.all([fetchPosts(tab, 0, false), fetchLikedIds(), fetchSavedIds()]);
       setIsLoading(false);
     })();
   }, []);
@@ -86,16 +108,28 @@ export function useFeed(): UseFeedReturn {
   function changeTab(newTab: FeedTab): void {
     if (newTab === tab) return;
     setTab(newTab);
+    setPage(0);
+    setHasMore(true);
     setIsLoading(true);
-    fetchPosts(newTab).finally(() => setIsLoading(false));
+    fetchPosts(newTab, 0, false).finally(() => setIsLoading(false));
   }
 
   const refresh = useCallback((): void => {
+    setPage(0);
+    setHasMore(true);
     setIsRefreshing(true);
-    Promise.all([fetchPosts(tab), fetchLikedIds(), fetchSavedIds()]).finally(() =>
+    Promise.all([fetchPosts(tab, 0, false), fetchLikedIds(), fetchSavedIds()]).finally(() =>
       setIsRefreshing(false)
     );
   }, [tab]);
+
+  function loadMore(): void {
+    if (isLoadingMore || !hasMore || tab === 'seguiti' || tab === 'tendenze') return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    setIsLoadingMore(true);
+    fetchPosts(tab, nextPage, true).finally(() => setIsLoadingMore(false));
+  }
 
   function toggleLike(postId: number): void {
     const wasLiked = likedIds.has(postId);
@@ -177,9 +211,12 @@ export function useFeed(): UseFeedReturn {
     tab,
     isLoading,
     isRefreshing,
+    isLoadingMore,
+    hasMore,
     publishError,
     changeTab,
     refresh,
+    loadMore,
     toggleLike,
     toggleSave,
     deletePost,
