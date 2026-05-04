@@ -32,6 +32,7 @@ export interface UseFeedReturn {
   isRefreshing: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
+  feedError: string | null;
   publishError: string | null;
   changeTab: (newTab: FeedTab) => void;
   refresh: () => void;
@@ -52,9 +53,11 @@ export function useFeed(): UseFeedReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [feedError, setFeedError] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
 
   async function fetchPosts(currentTab: FeedTab, pg: number, append: boolean): Promise<void> {
+    setFeedError(null);
     try {
       let data: Post[];
       if (currentTab === 'seguiti') {
@@ -74,8 +77,9 @@ export function useFeed(): UseFeedReturn {
         setPosts(arr);
       }
       setHasMore(currentTab === 'pertе' && arr.length === PAGE_SIZE);
-    } catch {
+    } catch (err) {
       if (!append) setPosts([]);
+      setFeedError(parsePostError(err));
     }
   }
 
@@ -213,6 +217,7 @@ export function useFeed(): UseFeedReturn {
     isRefreshing,
     isLoadingMore,
     hasMore,
+    feedError,
     publishError,
     changeTab,
     refresh,

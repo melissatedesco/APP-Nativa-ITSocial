@@ -10,9 +10,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import axios from 'axios';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
 import { authService } from '../../services/authService';
+
+function parseCodiceError(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    if (!err.response) return 'Impossibile raggiungere il server. Controlla la connessione.';
+    const status = err.response.status;
+    if (status === 400) return 'Codice non valido o scaduto. Richiedi un nuovo codice.';
+    if (status === 429) return 'Troppi tentativi falliti. Attendi e richiedi un nuovo codice.';
+    const msg: string | undefined = err.response.data?.message;
+    if (msg) return msg;
+    if (status >= 500) return 'Errore del server. Riprova più tardi.';
+  }
+  return 'Codice non valido o scaduto. Riprova.';
+}
 
 const C = {
   bg: '#F1F5F9',
@@ -62,8 +76,8 @@ export default function VerificaCodiceScreen({ navigation }: Props) {
     try {
       await authService.verificaCodice(codice);
       navigation.navigate('NuovaPassword', { codice });
-    } catch {
-      setError('Codice non valido o scaduto. Riprova o richiedi un nuovo codice.');
+    } catch (err) {
+      setError(parseCodiceError(err));
       setDigits(['', '', '', '']);
       refs[0].current?.focus();
     } finally {

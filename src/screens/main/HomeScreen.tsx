@@ -181,6 +181,8 @@ function CommentsSection({
 function PollSection({ initialSondaggio }: { initialSondaggio: SondaggioDto }) {
   const [sondaggio, setSondaggio] = useState<SondaggioDto>(initialSondaggio);
   const [voting, setVoting] = useState(false);
+  const [votingId, setVotingId] = useState<number | null>(null);
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   const hasVoted = sondaggio.idOpzioneVotata != null;
   const showResults = hasVoted || sondaggio.scaduto;
@@ -195,27 +197,42 @@ function PollSection({ initialSondaggio }: { initialSondaggio: SondaggioDto }) {
     return `Scade tra ${Math.floor(h / 24)}g`;
   }
 
+  function buildOptimistic(prev: SondaggioDto, idOpzione: number): SondaggioDto {
+    const totale = (prev.totaleVoti ?? 0) + 1;
+    const opzioni = prev.opzioni.map(o => {
+      const voti = o.idOpzione === idOpzione ? o.numVoti + 1 : o.numVoti;
+      return { ...o, numVoti: voti, percentuale: Math.round((voti / totale) * 100) };
+    });
+    return { ...prev, totaleVoti: totale, idOpzioneVotata: idOpzione, opzioni };
+  }
+
   async function handleVote(idOpzione: number) {
     if (showResults || voting) return;
+    setVoteError(null);
     setVoting(true);
+    setVotingId(idOpzione);
     // Optimistic update
-    setSondaggio(prev => {
-      const totale = (prev.totaleVoti ?? 0) + 1;
-      const opzioni = prev.opzioni.map(o => {
-        const voti = o.idOpzione === idOpzione ? o.numVoti + 1 : o.numVoti;
-        return { ...o, numVoti: voti, percentuale: Math.round((voti / totale) * 100) };
-      });
-      return { ...prev, totaleVoti: totale, idOpzioneVotata: idOpzione, opzioni };
-    });
+    setSondaggio(prev => buildOptimistic(prev, idOpzione));
+
     try {
       const updated = await sondaggioService.vota(idOpzione);
       setSondaggio(updated);
-    } catch {
-      // rollback on error
+    } catch (err: unknown) {
+      // Rollback and show inline error
       setSondaggio(initialSondaggio);
-      Alert.alert('Errore', 'Impossibile registrare il voto. Riprova.');
+      if (
+        err &&
+        typeof err === 'object' &&
+        'response' in err &&
+        (err as { response?: { status?: number } }).response == null
+      ) {
+        setVoteError('Nessuna connessione. Controlla la rete e riprova.');
+      } else {
+        setVoteError('Impossibile registrare il voto. Riprova.');
+      }
     } finally {
       setVoting(false);
+      setVotingId(null);
     }
   }
 
@@ -227,6 +244,7 @@ function PollSection({ initialSondaggio }: { initialSondaggio: SondaggioDto }) {
         {sondaggio.opzioni.map(opzione => {
           const isVoted = sondaggio.idOpzioneVotata === opzione.idOpzione;
           const pct = opzione.percentuale ?? 0;
+          const isThisVoting = votingId === opzione.idOpzione;
 
           if (showResults) {
             return (
@@ -247,16 +265,23 @@ function PollSection({ initialSondaggio }: { initialSondaggio: SondaggioDto }) {
           return (
             <TouchableOpacity
               key={opzione.idOpzione}
-              style={styles.pollVoteBtn}
+              style={[styles.pollVoteBtn, voting && !isThisVoting && styles.pollVoteBtnDimmed]}
               onPress={() => handleVote(opzione.idOpzione)}
               disabled={voting}
               activeOpacity={0.7}
             >
-              <Text style={styles.pollVoteBtnText}>{opzione.testo}</Text>
+              {isThisVoting
+                ? <ActivityIndicator size="small" color={C.primary} />
+                : <Text style={styles.pollVoteBtnText}>{opzione.testo}</Text>
+              }
             </TouchableOpacity>
           );
         })}
       </View>
+
+      {voteError && (
+        <Text style={styles.pollVoteError}>{voteError}</Text>
+      )}
 
       <View style={styles.pollMeta}>
         <Text style={styles.pollMetaText}>{sondaggio.totaleVoti} voti</Text>
@@ -555,6 +580,7 @@ export default function HomeScreen() {
     isLoading,
     isRefreshing,
     isLoadingMore,
+    feedError,
     publishError,
     changeTab,
     refresh,
@@ -594,6 +620,12 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {feedError && !isLoading && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>⚠️ {feedError}</Text>
+        </View>
+      )}
+
       {isLoading && (
         <View style={styles.feedLoading}>
           <ActivityIndicator color={C.primary} />
@@ -616,11 +648,19 @@ export default function HomeScreen() {
       onEndReachedThreshold={0.4}
       ListEmptyComponent={
         !isLoading ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>📭</Text>
-            <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
-            <Text style={styles.emptySubtitle}>Sii il primo a pubblicare qualcosa!</Text>
-          </View>
+          feedError ? null : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>📭</Text>
+              <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
+              <Text style={styles.emptySubtitle}>
+                {tab === 'seguiti'
+                  ? 'Segui altri utenti per vedere i loro post.'
+                  : tab === 'tendenze'
+                  ? 'Non ci sono post in tendenza al momento.'
+                  : 'Sii il primo a pubblicare qualcosa!'}
+              </Text>
+            </View>
+          )
         ) : null
       }
       ListFooterComponent={
@@ -939,7 +979,7 @@ const styles = StyleSheet.create({
   },
   errorBannerText: { fontSize: 13, color: '#B91C1C', fontWeight: '500' },
 
-  loadingMore: {
+loadingMore: {
     paddingVertical: 20,
     alignItems: 'center',
   },
@@ -964,8 +1004,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: C.primary,
     alignItems: 'center',
+    minHeight: 40,
+    justifyContent: 'center',
   },
+  pollVoteBtnDimmed: { opacity: 0.4 },
   pollVoteBtnText: { fontSize: 13, fontWeight: '600', color: C.primary },
+  pollVoteError: { fontSize: 12, color: C.danger, fontWeight: '500', marginTop: 2 },
   pollResultRow: { gap: 4 },
   pollBarWrap: {
     borderRadius: 8,

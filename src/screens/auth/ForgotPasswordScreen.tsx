@@ -10,9 +10,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import axios from 'axios';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
 import { authService } from '../../services/authService';
+
+function parseResetError(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    if (!err.response) return 'Impossibile raggiungere il server. Controlla la connessione.';
+    const status = err.response.status;
+    if (status === 404) return 'Nessun account trovato con questa email.';
+    if (status === 429) return 'Troppi tentativi. Attendi qualche minuto e riprova.';
+    const msg: string | undefined = err.response.data?.message;
+    if (msg) return msg;
+    if (status >= 500) return 'Errore del server. Riprova più tardi.';
+  }
+  return 'Si è verificato un errore. Riprova.';
+}
 
 const C = {
   bg: '#F1F5F9',
@@ -43,13 +57,15 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
   async function handleSubmit() {
     if (!email.trim()) { setError('Inserisci la tua email.'); return; }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) { setError('Inserisci un indirizzo email valido.'); return; }
     setLoading(true);
     setError('');
     try {
       await authService.richiestaReset(email.trim());
       setSent(true);
-    } catch {
-      setError('Email non trovata o errore del server. Riprova.');
+    } catch (err) {
+      setError(parseResetError(err));
     } finally {
       setLoading(false);
     }

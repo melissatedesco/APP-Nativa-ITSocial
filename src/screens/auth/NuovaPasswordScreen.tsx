@@ -10,10 +10,24 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import axios from 'axios';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types';
 import { authService } from '../../services/authService';
+
+function parseNuovaPasswordError(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    if (!err.response) return 'Impossibile raggiungere il server. Controlla la connessione.';
+    const status = err.response.status;
+    if (status === 400) return 'Il codice è scaduto o non valido. Torna indietro e richiedi un nuovo codice.';
+    if (status === 422) return 'La password non rispetta i requisiti minimi.';
+    const msg: string | undefined = err.response.data?.message;
+    if (msg) return msg;
+    if (status >= 500) return 'Errore del server. Riprova più tardi.';
+  }
+  return 'Impossibile cambiare la password. Riprova.';
+}
 
 const C = {
   bg: '#F1F5F9',
@@ -53,8 +67,8 @@ export default function NuovaPasswordScreen({ navigation, route }: Props) {
     try {
       await authService.nuovaPassword(codice, password);
       setSuccess(true);
-    } catch {
-      setError('Impossibile cambiare la password. Il codice potrebbe essere scaduto.');
+    } catch (err) {
+      setError(parseNuovaPasswordError(err));
     } finally {
       setLoading(false);
     }
