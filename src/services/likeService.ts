@@ -1,14 +1,19 @@
 import { api } from './api';
 
 interface LikeDto {
-  id: number;
+  id?: number;
   idPost: number;
+}
+
+// Spring Data returns Page<T> — a wrapper object with a `content` array.
+interface SpringPage<T> {
+  content: T[];
 }
 
 export const likeService = {
   async getMyLikes(): Promise<LikeDto[]> {
-    const { data } = await api.get<LikeDto[]>('/likes/miei');
-    return data;
+    const { data } = await api.get<SpringPage<LikeDto>>('/likes/miei');
+    return data.content ?? [];
   },
 
   async likePost(idPost: number): Promise<void> {

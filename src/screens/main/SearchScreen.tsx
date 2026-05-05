@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,94 +8,257 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { ProfiloDto } from '../../types';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ProfiloDto, MainStackParamList } from '../../types';
 import { userService } from '../../services/userService';
 
+const C = {
+  bg: '#F1F5F9',
+  card: '#FFFFFF',
+  border: '#E2E8F0',
+  text: '#1E293B',
+  textSoft: '#64748B',
+  textMuted: '#94A3B8',
+  primary: '#4A8FD4',
+  primaryDark: '#2D6BB5',
+  } as const;
+  
+const AVATAR_GRADIENT: [string, string] = ['#6BA3E0', '#2B5BA8'];
+
+function getRuoloTag(ruolo?: string) {
+  if (!ruolo) return null;
+  const r = ruolo.toUpperCase();
+  if (r.includes('ADMIN'))      return { label: 'Admin',      bg: '#FEF3C7', text: '#92400E' };
+  if (r.includes('PROFESSORE')) return { label: 'Professore', bg: '#DBEAFE', text: '#1E40AF' };
+  if (r.includes('STUDENTE'))   return { label: 'Studente',   bg: '#D1FAE5', text: '#065F46' };
+  return null;
+}
+
 export default function SearchScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProfiloDto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function handleSearch(text: string) {
+  function handleSearch(text: string) {
     setQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (text.length < 2) {
       setResults([]);
+      setError('');
       return;
     }
-    setLoading(true);
-    try {
-      const users = await userService.searchUsers(text);
-      setResults(users);
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const users = await userService.searchUsers(text);
+        setResults(users);
+      } catch {
+        setError('Errore durante la ricerca. Riprova.');
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  }
+
+  function handleClear() {
+    setQuery('');
+    setResults([]);
+    setError('');
   }
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Cerca utenti..."
-        value={query}
-        onChangeText={handleSearch}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      {loading && <ActivityIndicator color="#1a73e8" style={{ marginTop: 16 }} />}
+    <View style={styles.page}>
+      {/* Search bar */}
+      <View style={styles.searchBar}>
+        <MaterialCommunityIcons name="magnify" size={20} color={C.textSoft} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Cerca utenti per username, nome…"
+          placeholderTextColor={C.textMuted}
+          value={query}
+          onChangeText={handleSearch}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+        />
+        {query.length > 0 && (
+          <TouchableOpacity onPress={handleClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <MaterialCommunityIcons name="close-circle" size={18} color={C.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {loading && (
+        <View style={styles.centered}>
+          <ActivityIndicator color={C.primary} />
+        </View>
+      )}
+
+      {error !== '' && (
+        <View style={styles.errorBox}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#B91C1C" />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {!loading && query.length >= 2 && results.length === 0 && error === '' && (
+        <View style={styles.centered}>
+          <MaterialCommunityIcons name="account-search-outline" size={48} color={C.textMuted} />
+          <Text style={styles.emptyTitle}>Nessun risultato</Text>
+          <Text style={styles.emptySubtitle}>Prova con un altro termine di ricerca</Text>
+        </View>
+      )}
+
+      {query.length < 2 && query.length > 0 && (
+        <View style={styles.centered}>
+          <Text style={styles.hintText}>Digita almeno 2 caratteri per cercare</Text>
+        </View>
+      )}
+
+      {query.length === 0 && (
+        <View style={styles.centered}>
+          <MaterialCommunityIcons name="account-group-outline" size={52} color={C.textMuted} />
+          <Text style={styles.hintText}>Cerca utenti della community</Text>
+        </View>
+      )}
+
       <FlatList
         data={results}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.userRow}>
-            <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarText}>
-                {item.nome?.[0] ?? '?'}
-                {item.cognome?.[0] ?? ''}
-              </Text>
-            </View>
-            <View>
-              <Text style={styles.userName}>
-                {item.nome} {item.cognome}
-              </Text>
-              <Text style={styles.userHandle}>@{item.username}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
+        contentContainerStyle={styles.listContent}
+        renderItem={({ item }) => {
+          const tag = getRuoloTag(item.ruolo);
+          const initials = `${item.nome?.[0] ?? ''}${item.cognome?.[0] ?? ''}`.toUpperCase();
+          return (
+            <TouchableOpacity
+              style={styles.userCard}
+              onPress={() => navigation.navigate('UserProfile', { username: item.username })}
+              activeOpacity={0.75}
+            >
+              <LinearGradient colors={AVATAR_GRADIENT} style={styles.avatar}>
+                <Text style={styles.avatarText}>{initials || '?'}</Text>
+              </LinearGradient>
+              <View style={styles.userInfo}>
+                <View style={styles.userNameRow}>
+                  <Text style={styles.userName}>{item.nome} {item.cognome}</Text>
+                  {tag && (
+                    <View style={[styles.roleTag, { backgroundColor: tag.bg }]}>
+                      <Text style={[styles.roleTagText, { color: tag.text }]}>{tag.label}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.userHandle}>@{item.username}</Text>
+                <View style={styles.userStats}>
+                  <Text style={styles.userStat}>{item.numPost} post</Text>
+                  <Text style={styles.userStatDot}>·</Text>
+                  <Text style={styles.userStat}>{item.numSeguaci} seguaci</Text>
+                </View>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={C.textMuted} />
+            </TouchableOpacity>
+          );
+        }}
+        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    fontSize: 16,
-    backgroundColor: '#f5f5f5',
-  },
-  userRow: {
+  page: { flex: 1, backgroundColor: C.bg },
+
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    gap: 12,
+    backgroundColor: C.card,
+    margin: 16,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: C.border,
+    gap: 10,
+    shadowColor: '#1A2433',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  userAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#1a73e8',
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: C.text,
+    paddingVertical: 0,
+  },
+
+  centered: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    gap: 10,
+  },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: C.text },
+  emptySubtitle: { fontSize: 13, color: C.textSoft },
+  hintText: { fontSize: 13, color: C.textMuted, textAlign: 'center' },
+
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorText: { fontSize: 13, color: '#B91C1C', flex: 1 },
+
+  listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
+
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 14,
+    gap: 12,
+    shadowColor: '#1A2433',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  userAvatarText: { color: '#fff', fontWeight: 'bold' },
-  userName: { fontSize: 15, fontWeight: '600' },
-  userHandle: { fontSize: 13, color: '#888' },
+  avatarText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  userInfo: { flex: 1, gap: 2 },
+  userNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  userName: { fontSize: 15, fontWeight: '700', color: C.text },
+  userHandle: { fontSize: 13, color: C.textSoft },
+  userStats: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  userStat: { fontSize: 11, color: C.textMuted },
+  userStatDot: { fontSize: 11, color: C.textMuted },
+  roleTag: {
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  roleTagText: { fontSize: 10, fontWeight: '700' },
 });
