@@ -13,27 +13,27 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { messaggiService } from '../../services/messaggiService';
 import { ConversazioneDto, MessaggioDto } from '../../types';
 
 const C = {
-  bg: '#F1F5F9',
-  card: '#FFFFFF',
-  border: '#E2E8F0',
-  text: '#1E293B',
-  textSoft: '#64748B',
-  textMuted: '#94A3B8',
-  primary: '#4A8FD4',
-  primaryDark: '#2D6BB5',
-  brand700: '#2B5BA8',
-  danger: '#E53E3E',
-  msgOut: '#4A8FD4',
-  msgIn: '#F1F5F9',
+  bg: '#F8FAFC',
+  card: '#ffffff',
+  border: '#E8F0F5',
+  text: '#1A2433',
+  textSoft: '#6b7280',
+  textMuted: '#9ca3af',
+  primary: '#00ACC1',
+  primaryDark: '#0097A7',
+  danger: '#dc2626',
+  msgOut: '#00ACC1',
+  msgIn: '#F8FAFC',
 } as const;
 
-const AVATAR_GRADIENT: [string, string] = ['#6BA3E0', '#2B5BA8'];
+const AVATAR_GRADIENT: [string, string] = ['#67E8F9', '#00ACC1'];
 
 type ScreenView = 'list' | 'chat';
 
@@ -87,7 +87,7 @@ function ConversationList({
       }
       ListEmptyComponent={
         <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>✉️</Text>
+          <MaterialCommunityIcons name="message-text-outline" size={52} color={C.textMuted} />
           <Text style={styles.emptyTitle}>Nessun messaggio</Text>
           <Text style={styles.emptySubtitle}>Cerca un utente nel feed e inizia una conversazione</Text>
         </View>
@@ -96,9 +96,10 @@ function ConversationList({
         const u = item.altroUtente;
         const initials = `${u.nome?.[0] ?? ''}${u.cognome?.[0] ?? ''}`.toUpperCase();
         const lastMsg = item.ultimoMessaggio;
+        const hasUnread = item.nonLetti > 0;
         return (
           <TouchableOpacity
-            style={styles.convCard}
+            style={[styles.convCard, hasUnread && styles.convCardUnread]}
             onPress={() => onOpen(item)}
             activeOpacity={0.75}
           >
@@ -107,20 +108,24 @@ function ConversationList({
             </LinearGradient>
             <View style={styles.convBody}>
               <View style={styles.convNameRow}>
-                <Text style={styles.convName}>{u.nome} {u.cognome}</Text>
+                <Text style={[styles.convName, hasUnread && styles.convNameUnread]}>
+                  {u.nome} {u.cognome}
+                </Text>
                 {lastMsg && <Text style={styles.convTime}>{timeAgo(lastMsg.dataOra)}</Text>}
               </View>
               <Text style={styles.convHandle}>@{u.username}</Text>
               {lastMsg && (
-                <Text style={styles.convLastMsg} numberOfLines={1}>
+                <Text style={[styles.convLastMsg, hasUnread && styles.convLastMsgUnread]} numberOfLines={1}>
                   {lastMsg.testo}
                 </Text>
               )}
             </View>
-            {item.nonLetti > 0 && (
+            {hasUnread ? (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadBadgeText}>{item.nonLetti}</Text>
               </View>
+            ) : (
+              <MaterialCommunityIcons name="chevron-right" size={20} color={C.textMuted} />
             )}
           </TouchableOpacity>
         );
@@ -195,12 +200,12 @@ function ChatView({
       {/* Chat header */}
       <View style={styles.chatHeader}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.backBtnText}>‹</Text>
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.primary} />
         </TouchableOpacity>
         <LinearGradient colors={AVATAR_GRADIENT} style={styles.chatAvatar}>
           <Text style={styles.chatAvatarText}>{initials}</Text>
         </LinearGradient>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.chatName}>{u.nome} {u.cognome}</Text>
           <Text style={styles.chatHandle}>@{u.username}</Text>
         </View>
@@ -226,10 +231,18 @@ function ChatView({
                     <Text style={styles.msgSender}>{item.mittente.nome}</Text>
                   )}
                   <Text style={[styles.msgText, isOut && styles.msgTextOut]}>{item.testo}</Text>
-                  <Text style={[styles.msgTime, isOut && styles.msgTimeOut]}>
-                    {formatChatTime(item.dataOra)}
-                    {isOut && (item.letto ? '  ✓✓' : '  ✓')}
-                  </Text>
+                  <View style={styles.msgTimeRow}>
+                    <Text style={[styles.msgTime, isOut && styles.msgTimeOut]}>
+                      {formatChatTime(item.dataOra)}
+                    </Text>
+                    {isOut && (
+                      <MaterialCommunityIcons
+                        name={item.letto ? 'check-all' : 'check'}
+                        size={12}
+                        color={item.letto ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)'}
+                      />
+                    )}
+                  </View>
                 </View>
               </View>
             );
@@ -258,7 +271,7 @@ function ChatView({
           >
             {sending
               ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.sendBtnText}>↑</Text>
+              : <MaterialCommunityIcons name="send" size={20} color="#fff" />
             }
           </TouchableOpacity>
         </View>
@@ -348,7 +361,7 @@ export default function MessaggiScreen() {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
 
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
 
   listContent: { padding: 16, paddingBottom: 32 },
 
@@ -356,16 +369,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: C.border,
     padding: 14,
     gap: 12,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowColor: '#1A2433',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
     elevation: 1,
+  },
+  convCardUnread: {
+    borderColor: C.primary + '40',
+    backgroundColor: '#E0F7FA',
   },
   convAvatar: {
     width: 48,
@@ -377,10 +394,12 @@ const styles = StyleSheet.create({
   convAvatarText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   convBody: { flex: 1, gap: 2 },
   convNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  convName: { fontSize: 15, fontWeight: '700', color: C.text },
+  convName: { fontSize: 15, fontWeight: '600', color: C.text },
+  convNameUnread: { fontWeight: '800' },
   convTime: { fontSize: 11, color: C.textMuted },
   convHandle: { fontSize: 12, color: C.textSoft },
   convLastMsg: { fontSize: 13, color: C.textMuted, marginTop: 2 },
+  convLastMsgUnread: { color: C.text, fontWeight: '600' },
   unreadBadge: {
     backgroundColor: C.primary,
     borderRadius: 999,
@@ -392,10 +411,9 @@ const styles = StyleSheet.create({
   },
   unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 
-  emptyState: { alignItems: 'center', paddingVertical: 80, gap: 8 },
-  emptyEmoji: { fontSize: 48 },
+  emptyState: { alignItems: 'center', paddingVertical: 80, gap: 10 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
-  emptySubtitle: { fontSize: 13, color: C.textSoft, textAlign: 'center' },
+  emptySubtitle: { fontSize: 13, color: C.textSoft, textAlign: 'center', paddingHorizontal: 32 },
 
   // Chat
   chatContainer: { flex: 1, backgroundColor: C.bg },
@@ -408,14 +426,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.border,
     gap: 12,
-    shadowColor: '#1E293B',
+    shadowColor: '#1A2433',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.07,
     shadowRadius: 6,
     elevation: 3,
   },
   backBtn: { padding: 4 },
-  backBtnText: { fontSize: 28, color: C.primary, fontWeight: '300', lineHeight: 32 },
   chatAvatar: {
     width: 38,
     height: 38,
@@ -450,7 +467,8 @@ const styles = StyleSheet.create({
   msgSender: { fontSize: 11, fontWeight: '700', color: C.primary, marginBottom: 2 },
   msgText: { fontSize: 14, color: C.text, lineHeight: 20 },
   msgTextOut: { color: '#fff' },
-  msgTime: { fontSize: 10, color: C.textMuted, alignSelf: 'flex-end' },
+  msgTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' },
+  msgTime: { fontSize: 10, color: C.textMuted },
   msgTimeOut: { color: 'rgba(255,255,255,0.7)' },
 
   inputRow: {
@@ -475,18 +493,17 @@ const styles = StyleSheet.create({
     color: C.text,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: C.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.28,
     shadowRadius: 8,
     elevation: 3,
   },
   sendBtnDisabled: { opacity: 0.4 },
-  sendBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
 });

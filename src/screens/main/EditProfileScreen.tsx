@@ -12,26 +12,26 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/UserContext';
 
 const C = {
-  bg: '#F1F5F9',
-  card: '#FFFFFF',
-  border: '#E2E8F0',
-  text: '#1E293B',
-  textSoft: '#64748B',
-  textMuted: '#94A3B8',
-  primary: '#4A8FD4',
-  primaryDark: '#2D6BB5',
-  brand700: '#2B5BA8',
-  danger: '#E53E3E',
+  bg: '#F8FAFC',
+  card: '#ffffff',
+  border: '#E8F0F5',
+  text: '#1A2433',
+  textSoft: '#6b7280',
+  textMuted: '#9ca3af',
+  primary: '#00ACC1',
+  primaryDark: '#0097A7',
+  danger: '#dc2626',
   dangerBg: '#FEF2F2',
   dangerBorder: '#FECACA',
 } as const;
 
-const AVATAR_GRADIENT: [string, string] = ['#6BA3E0', '#2B5BA8'];
+const AVATAR_GRADIENT: [string, string] = ['#67E8F9', '#00ACC1'];
 const AVATAR_SIZE = 96;
 
 export default function EditProfileScreen() {
@@ -83,9 +83,7 @@ export default function EditProfileScreen() {
       });
 
       setSuccess(true);
-      setTimeout(() => {
-        navigation.goBack();
-      }, 800);
+      setTimeout(() => navigation.goBack(), 800);
     } catch (err: any) {
       setError(err?.message ?? 'Impossibile salvare il profilo.');
     } finally {
@@ -95,6 +93,7 @@ export default function EditProfileScreen() {
 
   const currentPhoto = fotoProfilo.trim() || profile?.fotoProfilo || null;
   const displayInitial = ((nome || user?.nome || '?')[0]).toUpperCase();
+  const canSave = nome.trim().length > 0 && cognome.trim().length > 0 && !saving;
 
   return (
     <KeyboardAvoidingView
@@ -107,7 +106,6 @@ export default function EditProfileScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-
         {/* Avatar */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrap}>
@@ -119,7 +117,9 @@ export default function EditProfileScreen() {
               </LinearGradient>
             )}
           </View>
-          <Text style={styles.avatarHint}>Inserisci un URL foto nel campo sottostante</Text>
+          <Text style={styles.avatarHint}>
+            Inserisci un URL foto nel campo sottostante
+          </Text>
         </View>
 
         {/* Form */}
@@ -182,20 +182,22 @@ export default function EditProfileScreen() {
 
           {error !== '' && (
             <View style={styles.alertError}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={16} color={C.danger} />
               <Text style={styles.alertErrorText}>{error}</Text>
             </View>
           )}
 
           {success && (
             <View style={styles.alertSuccess}>
-              <Text style={styles.alertSuccessText}>✓ Profilo aggiornato!</Text>
+              <MaterialCommunityIcons name="check-circle-outline" size={16} color="#065F46" />
+              <Text style={styles.alertSuccessText}>Profilo aggiornato!</Text>
             </View>
           )}
 
           <TouchableOpacity
-            style={[styles.saveBtn, (saving || !nome.trim() || !cognome.trim()) && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, !canSave && styles.saveBtnDisabled]}
             onPress={handleSave}
-            disabled={saving || !nome.trim() || !cognome.trim()}
+            disabled={!canSave}
             activeOpacity={0.85}
           >
             {saving ? (
@@ -204,7 +206,10 @@ export default function EditProfileScreen() {
                 <Text style={styles.saveBtnText}>Salvataggio…</Text>
               </>
             ) : (
-              <Text style={styles.saveBtnText}>Salva modifiche</Text>
+              <>
+                <MaterialCommunityIcons name="content-save-outline" size={18} color="#fff" />
+                <Text style={styles.saveBtnText}>Salva modifiche</Text>
+              </>
             )}
           </TouchableOpacity>
 
@@ -217,7 +222,6 @@ export default function EditProfileScreen() {
           </TouchableOpacity>
 
         </View>
-
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -238,11 +242,11 @@ const styles = StyleSheet.create({
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: '#1A2433',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 6,
   },
   avatarImg: { width: '100%', height: '100%' },
   avatarGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -252,16 +256,16 @@ const styles = StyleSheet.create({
   formCard: {
     width: '100%',
     backgroundColor: C.card,
-    borderRadius: 24,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: C.border,
     padding: 24,
     gap: 20,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 5,
+    shadowColor: '#1A2433',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   field: { gap: 6 },
@@ -269,10 +273,10 @@ const styles = StyleSheet.create({
   input: {
     paddingHorizontal: 14,
     paddingVertical: 11,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: C.bg,
     borderWidth: 1.5,
     borderColor: C.border,
-    borderRadius: 14,
+    borderRadius: 12,
     fontSize: 14,
     color: C.text,
   },
@@ -283,15 +287,21 @@ const styles = StyleSheet.create({
   charCount: { fontSize: 11, color: C.textMuted, alignSelf: 'flex-end' },
 
   alertError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     padding: 12,
     backgroundColor: C.dangerBg,
     borderWidth: 1,
     borderColor: C.dangerBorder,
     borderRadius: 12,
   },
-  alertErrorText: { fontSize: 13, color: C.danger, fontWeight: '500' },
+  alertErrorText: { fontSize: 13, color: C.danger, fontWeight: '500', flex: 1 },
 
   alertSuccess: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     padding: 12,
     backgroundColor: '#D1FAE5',
     borderWidth: 1,
@@ -312,9 +322,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.28,
     shadowRadius: 16,
-    elevation: 5,
+    elevation: 4,
   },
-  saveBtnDisabled: { opacity: 0.55 },
+  saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
   cancelBtn: {

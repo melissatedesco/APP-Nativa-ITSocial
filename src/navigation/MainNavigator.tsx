@@ -2,36 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainTabParamList, MainStackParamList } from '../types';
 import HomeScreen from '../screens/main/HomeScreen';
-import SearchScreen from '../screens/main/SearchScreen';
+import MyClassScreen from '../screens/main/MyClassScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
 import MessaggiScreen from '../screens/main/MessaggiScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
 import SavedPostsScreen from '../screens/main/SavedPostsScreen';
 import { notificaService } from '../services/notificaService';
-import { messaggiService } from '../services/messaggiService';
+import { useTheme } from '../context/ThemeContext';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
-// ─── Badge-aware tab icons ────────────────────────────────────────────────────
-function NotificationIcon({ color }: { color: string }) {
-  const [count, setCount] = useState(0);
+type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-  useEffect(() => {
-    const load = () => notificaService.getContatore()
-      .then(r => setCount(r.nonLette))
-      .catch(() => {});
-    load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
+function BadgeIcon({ name, color, count }: { name: MCIName; color: string; count: number }) {
   return (
     <View style={iconStyles.wrap}>
-      <Text style={[iconStyles.icon, { color }]}>🔔</Text>
+      <MaterialCommunityIcons name={name} size={25} color={color} />
       {count > 0 && (
         <View style={iconStyles.badge}>
           <Text style={iconStyles.badgeText}>{count > 99 ? '99+' : count}</Text>
@@ -41,56 +32,38 @@ function NotificationIcon({ color }: { color: string }) {
   );
 }
 
-function MessagesIcon({ color }: { color: string }) {
+function NotificationIcon({ color, focused }: { color: string; focused: boolean }) {
   const [count, setCount] = useState(0);
-
   useEffect(() => {
-    const load = () => messaggiService.getNonLettiTotale()
-      .then(r => setCount(r.nonLetti))
-      .catch(() => {});
+    const load = () =>
+      notificaService.getContatore().then(r => setCount(r.nonLette)).catch(() => {});
     load();
     const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  return (
-    <View style={iconStyles.wrap}>
-      <Text style={[iconStyles.icon, { color }]}>✉️</Text>
-      {count > 0 && (
-        <View style={iconStyles.badge}>
-          <Text style={iconStyles.badgeText}>{count > 99 ? '99+' : count}</Text>
-        </View>
-      )}
-    </View>
-  );
+  return <BadgeIcon name={focused ? 'bell' : 'bell-outline'} color={color} count={count} />;
 }
 
-function TabIcon({ label, color }: { label: string; color: string }) {
-  const icons: Record<string, string> = {
-    Home: '🏠',
-    Search: '🔍',
-    Profile: '👤',
-  };
-  return <Text style={[iconStyles.icon, { color }]}>{icons[label] ?? '•'}</Text>;
-}
-
-// ─── Bottom Tabs ──────────────────────────────────────────────────────────────
 function MainTabs() {
+  const { colors: C, isDark } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#4A8FD4',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: C.primary,
+        tabBarInactiveTintColor: isDark ? '#4a6580' : '#9ca3af',
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E2E8F0',
+          backgroundColor: C.card,
+          borderTopColor: C.border,
           borderTopWidth: 1,
-          height: 58,
-          paddingBottom: 8,
+          height: 62,
+          paddingBottom: 10,
+          paddingTop: 6,
         },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         headerShown: true,
-        headerStyle: { backgroundColor: '#FFFFFF' },
-        headerTitleStyle: { fontWeight: '700', color: '#1E293B', fontSize: 17 },
+        headerStyle: { backgroundColor: C.card },
+        headerTitleStyle: { fontWeight: '700', color: C.text, fontSize: 17 },
         headerShadowVisible: false,
       }}
     >
@@ -99,17 +72,21 @@ function MainTabs() {
         component={HomeScreen}
         options={{
           title: 'Feed',
-          tabBarLabel: 'Feed',
-          tabBarIcon: ({ color }) => <TabIcon label="Home" color={color} />,
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'home' : 'home-outline'} size={25} color={color} />
+          ),
         }}
       />
       <Tab.Screen
-        name="Search"
-        component={SearchScreen}
+        name="MyClass"
+        component={MyClassScreen}
         options={{
-          title: 'Cerca',
-          tabBarLabel: 'Cerca',
-          tabBarIcon: ({ color }) => <TabIcon label="Search" color={color} />,
+          title: 'La mia Classe',
+          tabBarLabel: 'Classe',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'account-group' : 'account-group-outline'} size={25} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -118,16 +95,9 @@ function MainTabs() {
         options={{
           title: 'Notifiche',
           tabBarLabel: 'Notifiche',
-          tabBarIcon: ({ color }) => <NotificationIcon color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="Messages"
-        component={MessaggiScreen}
-        options={{
-          title: 'Messaggi',
-          tabBarLabel: 'Messaggi',
-          tabBarIcon: ({ color }) => <MessagesIcon color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <NotificationIcon color={color} focused={focused} />
+          ),
         }}
       />
       <Tab.Screen
@@ -136,54 +106,42 @@ function MainTabs() {
         options={{
           title: 'Profilo',
           tabBarLabel: 'Profilo',
-          tabBarIcon: ({ color }) => <TabIcon label="Profile" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'account-circle' : 'account-circle-outline'} size={25} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>
   );
 }
 
-// ─── Main Stack (wraps tabs + modal/full screens) ─────────────────────────────
 export default function MainNavigator() {
+  const { colors: C } = useTheme();
   return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="Tabs"
-        component={MainTabs}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="UserProfile"
-        component={ProfileScreen}
-        options={{ title: 'Profilo utente', headerBackTitle: 'Indietro' }}
-      />
-      <Stack.Screen
-        name="EditProfile"
-        component={EditProfileScreen}
-        options={{ title: 'Modifica profilo', headerBackTitle: 'Indietro' }}
-      />
-      <Stack.Screen
-        name="Chat"
-        component={MessaggiScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="SavedPosts"
-        component={SavedPostsScreen}
-        options={{ title: 'Post salvati', headerBackTitle: 'Indietro' }}
-      />
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: C.card },
+        headerTitleStyle: { color: C.text },
+        headerTintColor: C.primary,
+      }}
+    >
+      <Stack.Screen name="Tabs" component={MainTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="UserProfile" component={ProfileScreen} options={{ title: 'Profilo utente' }} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Modifica profilo' }} />
+      <Stack.Screen name="Messages" component={MessaggiScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Chat" component={MessaggiScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SavedPosts" component={SavedPostsScreen} options={{ title: 'Post salvati' }} />
     </Stack.Navigator>
   );
 }
 
 const iconStyles = StyleSheet.create({
   wrap: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
-  icon: { fontSize: 20 },
   badge: {
     position: 'absolute',
     top: -4,
     right: -8,
-    backgroundColor: '#E53E3E',
+    backgroundColor: '#ef4444',
     borderRadius: 999,
     minWidth: 16,
     height: 16,

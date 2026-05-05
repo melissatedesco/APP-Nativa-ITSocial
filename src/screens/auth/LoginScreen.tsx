@@ -11,22 +11,24 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
+import DebugConnectivity from '../../components/DebugConnectivity';
 import { useAuth } from '../../context/AuthContext';
 
-// Design tokens — fedeli al CSS del frontend Angular
 const C = {
-  bg: '#F1F5F9',          // --bg  (ink-50)
-  card: '#FFFFFF',         // --bg-elev
-  border: '#E2E8F0',       // --border (ink-200)
-  text: '#1E293B',         // --text (ink-900)
-  textSoft: '#64748B',     // --text-soft (ink-500)
-  primary: '#4A8FD4',      // --primary (brand-500 oklch≈)
-  primaryDark: '#2D6BB5',  // --primary-h (brand-600)
-  brand700: '#2B5BA8',     // brand-700
-  danger: '#E53E3E',       // --c-danger
-  dangerBg: '#FEF2F2',
+  bg:           '#F1F5F9',
+  card:         '#FFFFFF',
+  border:       '#E2E8F0',
+  text:         '#1E293B',
+  textSoft:     '#64748B',
+  textMuted:    '#94A3B8',
+  primary:      '#4A8FD4',
+  primaryDark:  '#2D6BB5',
+  brand700:     '#2B5BA8',
+  danger:       '#E53E3E',
+  dangerBg:     '#FEF2F2',
   dangerBorder: '#FECACA',
 } as const;
 
@@ -43,6 +45,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [errorMessage, setErrorMessage] = useState('');
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
 
   const usernameError = usernameTouched && !username;
   const passwordError = passwordTouched && !password;
@@ -95,7 +98,7 @@ export default function LoginScreen({ navigation }: Props) {
             <TextInput
               style={[styles.input, usernameError && styles.inputError]}
               placeholder="Il tuo username"
-              placeholderTextColor={C.textSoft}
+              placeholderTextColor={C.textMuted}
               value={username}
               onChangeText={(v) => { setUsername(v); setErrorMessage(''); }}
               onBlur={() => setUsernameTouched(true)}
@@ -119,7 +122,7 @@ export default function LoginScreen({ navigation }: Props) {
             <TextInput
               style={[styles.input, passwordError && styles.inputError]}
               placeholder="La tua password"
-              placeholderTextColor={C.textSoft}
+              placeholderTextColor={C.textMuted}
               value={password}
               onChangeText={(v) => { setPassword(v); setErrorMessage(''); }}
               onBlur={() => setPasswordTouched(true)}
@@ -166,16 +169,33 @@ export default function LoginScreen({ navigation }: Props) {
 
         </View>
 
+        {/* Debug panel */}
+        <View style={styles.debugSection}>
+          <TouchableOpacity
+            style={styles.debugToggle}
+            onPress={() => setDebugOpen(v => !v)}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="wifi-alert" size={14} color={C.textSoft} />
+            <Text style={styles.debugToggleText}>
+              {debugOpen ? 'Nascondi debug rete' : 'Debug rete (ERR_NETWORK)'}
+            </Text>
+            <MaterialCommunityIcons
+              name={debugOpen ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={C.textSoft}
+            />
+          </TouchableOpacity>
+          {debugOpen && <DebugConnectivity />}
+        </View>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  page: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
+  page: { flex: 1, backgroundColor: C.bg },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -184,7 +204,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  // Card
   card: {
     width: '100%',
     maxWidth: 440,
@@ -201,7 +220,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 
-  // Brand
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -209,18 +227,9 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 28,
   },
-  logo: {
-    width: 36,
-    height: 36,
-  },
-  brandName: {
-    fontWeight: '800',
-    fontSize: 20,
-    letterSpacing: -0.4,
-    color: C.brand700,
-  },
+  logo: { width: 36, height: 36 },
+  brandName: { fontWeight: '800', fontSize: 20, letterSpacing: -0.4, color: C.brand700 },
 
-  // Headings
   title: {
     fontWeight: '800',
     fontSize: 26,
@@ -237,16 +246,8 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
 
-  // Form
-  field: {
-    marginBottom: 16,
-  },
-  label: {
-    fontWeight: '600',
-    fontSize: 13,
-    color: C.text,
-    marginBottom: 6,
-  },
+  field: { marginBottom: 16 },
+  label: { fontWeight: '600', fontSize: 13, color: C.text, marginBottom: 6 },
   input: {
     width: '100%',
     paddingHorizontal: 14,
@@ -258,30 +259,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: C.text,
   },
-  inputError: {
-    borderColor: C.danger,
-  },
-  fieldError: {
-    marginTop: 5,
-    fontSize: 12,
-    fontWeight: '500',
-    color: C.danger,
-  },
+  inputError: { borderColor: C.danger },
+  fieldError: { marginTop: 5, fontSize: 12, fontWeight: '500', color: C.danger },
 
-  // Password row
   pwLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 6,
   },
-  forgotLink: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.primaryDark,
-  },
+  forgotLink: { fontSize: 12, fontWeight: '600', color: C.primaryDark },
 
-  // Submit button
   submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -298,17 +286,9 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 5,
   },
-  submitDisabled: {
-    opacity: 0.55,
-  },
-  submitText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: -0.1,
-  },
+  submitDisabled: { opacity: 0.55 },
+  submitText: { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: -0.1 },
 
-  // Alert
   alertError: {
     marginTop: 12,
     padding: 12,
@@ -317,27 +297,24 @@ const styles = StyleSheet.create({
     borderColor: C.dangerBorder,
     borderRadius: 14,
   },
-  alertErrorText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: C.danger,
-  },
+  alertErrorText: { fontSize: 13, fontWeight: '500', color: C.danger },
 
-  // Bottom link
   divider: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 20,
   },
-  dividerText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: C.textSoft,
+  dividerText: { fontSize: 13, fontWeight: '500', color: C.textSoft },
+  dividerLink: { fontSize: 13, fontWeight: '700', color: C.primaryDark },
+
+  debugSection: { width: '100%', maxWidth: 440, marginTop: 16, gap: 8 },
+  debugToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
   },
-  dividerLink: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.primaryDark,
-  },
+  debugToggleText: { fontSize: 12, color: C.textSoft, fontWeight: '500' },
 });

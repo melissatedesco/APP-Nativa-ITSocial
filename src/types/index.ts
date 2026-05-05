@@ -177,6 +177,31 @@ export interface ConversazioneDto {
   nonLetti: number;
 }
 
+// ─── Classes ──────────────────────────────────────────────────────────────────
+export interface ClasseCorsoDto {
+  id: number;
+  nome: string;
+  descrizione?: string;
+  codiceInvito?: string;
+  tipo?: string;
+  professoreUsername?: string;
+  professoreNome?: string;
+  numeroStudenti: number;
+  createdAt?: string;
+}
+
+export interface IscrizioneClasseDto {
+  id: number;
+  classeId: number;
+  classeNome: string;
+  professoreNome?: string;
+  studenteUsername?: string;
+  studenteNome?: string;
+  stato: 'IN_ATTESA' | 'APPROVATA' | 'RIFIUTATA' | string;
+  dataRichiesta?: string;
+  dataRisposta?: string;
+}
+
 // ─── Navigation ───────────────────────────────────────────────────────────────
 export type RootStackParamList = {
   Auth: undefined;
@@ -193,9 +218,8 @@ export type AuthStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
-  Search: undefined;
+  MyClass: undefined;
   Notifications: undefined;
-  Messages: undefined;
   Profile: undefined;
 };
 
@@ -205,4 +229,5 @@ export type MainStackParamList = {
   EditProfile: undefined;
   Chat: { username: string };
   SavedPosts: undefined;
+  Messages: undefined;
 };

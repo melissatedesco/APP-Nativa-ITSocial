@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -8,21 +8,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { notificaService } from '../../services/notificaService';
 import { NotificaDto, MainStackParamList } from '../../types';
+import { useTheme, ThemeColors } from '../../context/ThemeContext';
 
-const C = {
-  bg: '#F1F5F9',
-  card: '#FFFFFF',
-  border: '#E2E8F0',
-  text: '#1E293B',
-  textSoft: '#64748B',
-  textMuted: '#94A3B8',
-  primary: '#4A8FD4',
-  danger: '#E53E3E',
-} as const;
+type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 function timeAgo(iso?: string): string {
   if (!iso) return '';
@@ -36,33 +29,112 @@ function timeAgo(iso?: string): string {
   return `${d}g fa`;
 }
 
-function getIcona(tipo: string): string {
+function getIconConfig(tipo: string): { name: MCIName; color: string } {
   switch (tipo) {
-    case 'LIKE': return '★';
-    case 'COMMENTO': return '💬';
-    case 'FOLLOW': return '👤';
-    case 'ISCRIZIONE_RICHIESTA': return '⏳';
-    case 'ISCRIZIONE_APPROVATA': return '✅';
-    case 'ISCRIZIONE_RIFIUTATA': return '❌';
-    case 'ANNUNCIO': return '📢';
-    case 'MESSAGGIO': return '✉️';
-    default: return '🔔';
+    case 'LIKE':                 return { name: 'star-outline',            color: '#F59E0B' };
+    case 'COMMENTO':             return { name: 'comment-outline',          color: '#00bcd4' };
+    case 'FOLLOW':               return { name: 'account-plus-outline',     color: '#10B981' };
+    case 'ISCRIZIONE_RICHIESTA': return { name: 'clock-outline',            color: '#F97316' };
+    case 'ISCRIZIONE_APPROVATA': return { name: 'check-circle-outline',     color: '#10B981' };
+    case 'ISCRIZIONE_RIFIUTATA': return { name: 'close-circle-outline',     color: '#ef4444' };
+    case 'ANNUNCIO':             return { name: 'bullhorn-outline',         color: '#8B5CF6' };
+    case 'MESSAGGIO':            return { name: 'email-outline',            color: '#00bcd4' };
+    default:                     return { name: 'bell-outline',             color: '#9ca3af' };
   }
 }
 
-function getColore(tipo: string): string {
-  switch (tipo) {
-    case 'LIKE': return '#F59E0B';
-    case 'COMMENTO': return '#4A8FD4';
-    case 'FOLLOW': return '#10B981';
-    case 'ISCRIZIONE_RICHIESTA': return '#F97316';
-    case 'ISCRIZIONE_APPROVATA': return '#10B981';
-    case 'ISCRIZIONE_RIFIUTATA': return '#E53E3E';
-    case 'ANNUNCIO': return '#8B5CF6';
-    case 'MESSAGGIO': return '#4A8FD4';
-    default: return '#94A3B8';
-  }
-}
+const makeStyles = (C: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: C.bg },
+
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 32 },
+
+  errorTitle: { fontSize: 16, fontWeight: '700', color: C.text, textAlign: 'center' },
+  errorMessage: { fontSize: 13, color: C.textSoft, textAlign: 'center', lineHeight: 20 },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 999,
+    backgroundColor: C.primary,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  retryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerBadge: { fontSize: 13, fontWeight: '700', color: C.text },
+  headerAction: { fontSize: 13, fontWeight: '600', color: C.primary },
+
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    margin: 12,
+    padding: 12,
+    backgroundColor: C.dangerBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.danger + '40',
+  },
+  errorBannerText: { fontSize: 13, color: C.danger, flex: 1 },
+
+  listContent: { padding: 12, paddingBottom: 32 },
+
+  notificaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 14,
+    gap: 12,
+    shadowColor: '#191d2e',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  notificaCardUnread: {
+    borderColor: C.primary + '50',
+    backgroundColor: C.saveBg,
+  },
+  notificaIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificaBody: { flex: 1, gap: 3 },
+  notificaMessaggio: { fontSize: 13, color: C.text, lineHeight: 18 },
+  notificaTime: { fontSize: 11, color: C.textMuted },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.primary,
+  },
+
+  emptyState: { alignItems: 'center', paddingVertical: 80, gap: 10 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
+  emptySubtitle: { fontSize: 13, color: C.textSoft },
+});
 
 function NotificaCard({
   notifica,
@@ -73,7 +145,9 @@ function NotificaCard({
   onPress: (n: NotificaDto) => void;
   onDelete: (id: number) => void;
 }) {
-  const colore = getColore(notifica.tipo);
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
+  const { name, color } = getIconConfig(notifica.tipo);
   return (
     <TouchableOpacity
       style={[styles.notificaCard, !notifica.letta && styles.notificaCardUnread]}
@@ -81,8 +155,8 @@ function NotificaCard({
       onLongPress={() => onDelete(notifica.id)}
       activeOpacity={0.75}
     >
-      <View style={[styles.notificaIconWrap, { backgroundColor: colore + '20' }]}>
-        <Text style={[styles.notificaIcon, { color: colore }]}>{getIcona(notifica.tipo)}</Text>
+      <View style={[styles.notificaIconWrap, { backgroundColor: color + '20' }]}>
+        <MaterialCommunityIcons name={name} size={20} color={color} />
       </View>
       <View style={styles.notificaBody}>
         <Text style={styles.notificaMessaggio} numberOfLines={2}>{notifica.messaggio}</Text>
@@ -95,6 +169,8 @@ function NotificaCard({
 
 export default function NotificationsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
   const [notifiche, setNotifiche] = useState<NotificaDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -123,6 +199,13 @@ export default function NotificationsScreen() {
     setRefreshing(false);
   }
 
+  async function handleRetry() {
+    setError('');
+    setLoading(true);
+    await loadNotifiche();
+    setLoading(false);
+  }
+
   async function handlePress(n: NotificaDto) {
     if (!n.letta) {
       notificaService.segnaComeLetta(n.id).catch(() => {});
@@ -140,7 +223,7 @@ export default function NotificationsScreen() {
       await notificaService.elimina(id);
       setNotifiche(prev => prev.filter(x => x.id !== id));
     } catch {
-      // silently ignore
+      // ignore
     }
   }
 
@@ -149,11 +232,9 @@ export default function NotificationsScreen() {
       await notificaService.segnaComeLetteTutte();
       setNotifiche(prev => prev.map(x => ({ ...x, letta: true })));
     } catch {
-      // silently ignore
+      // ignore
     }
   }
-
-  const nonLette = notifiche.filter(n => !n.letta).length;
 
   if (loading) {
     return (
@@ -163,21 +244,40 @@ export default function NotificationsScreen() {
     );
   }
 
+  if (error && notifiche.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <MaterialCommunityIcons name="cloud-off-outline" size={52} color={C.textMuted} />
+        <Text style={styles.errorTitle}>Qualcosa è andato storto</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={handleRetry} activeOpacity={0.8}>
+          <MaterialCommunityIcons name="refresh" size={16} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={styles.retryBtnText}>Ricarica</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const nonLette = notifiche.filter(n => !n.letta).length;
+
   return (
     <View style={styles.page}>
-      {/* Header bar */}
       {nonLette > 0 && (
         <View style={styles.header}>
-          <Text style={styles.headerBadge}>{nonLette} non lette</Text>
+          <View style={styles.headerLeft}>
+            <MaterialCommunityIcons name="circle-small" size={16} color={C.primary} />
+            <Text style={styles.headerBadge}>{nonLette} non lette</Text>
+          </View>
           <TouchableOpacity onPress={segnaLetteTutte}>
             <Text style={styles.headerAction}>Segna tutte come lette</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {error !== '' && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{error}</Text>
+      {error !== '' && notifiche.length > 0 && (
+        <View style={styles.errorBanner}>
+          <MaterialCommunityIcons name="alert-outline" size={14} color={C.danger} />
+          <Text style={styles.errorBannerText}>{error}</Text>
         </View>
       )}
 
@@ -190,7 +290,7 @@ export default function NotificationsScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🔔</Text>
+            <MaterialCommunityIcons name="bell-off-outline" size={52} color={C.textMuted} />
             <Text style={styles.emptyTitle}>Nessuna notifica</Text>
             <Text style={styles.emptySubtitle}>Le tue notifiche appariranno qui</Text>
           </View>
@@ -207,76 +307,3 @@ export default function NotificationsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: C.bg },
-
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: C.card,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  headerBadge: { fontSize: 13, fontWeight: '700', color: C.text },
-  headerAction: { fontSize: 13, fontWeight: '600', color: C.primary },
-
-  errorBox: {
-    margin: 16,
-    padding: 12,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  errorText: { fontSize: 13, color: '#B91C1C' },
-
-  listContent: { padding: 16, paddingBottom: 32 },
-
-  notificaCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    gap: 12,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  notificaCardUnread: {
-    borderColor: C.primary + '50',
-    backgroundColor: '#F0F7FF',
-  },
-  notificaIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificaIcon: { fontSize: 18 },
-  notificaBody: { flex: 1, gap: 3 },
-  notificaMessaggio: { fontSize: 13, color: C.text, lineHeight: 18 },
-  notificaTime: { fontSize: 11, color: C.textMuted },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.primary,
-  },
-
-  emptyState: { alignItems: 'center', paddingVertical: 80, gap: 8 },
-  emptyEmoji: { fontSize: 48 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
-  emptySubtitle: { fontSize: 13, color: C.textSoft },
-});

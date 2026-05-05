@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProfiloDto, MainStackParamList } from '../../types';
@@ -23,8 +24,8 @@ const C = {
   textMuted: '#94A3B8',
   primary: '#4A8FD4',
   primaryDark: '#2D6BB5',
-} as const;
-
+  } as const;
+  
 const AVATAR_GRADIENT: [string, string] = ['#6BA3E0', '#2B5BA8'];
 
 function getRuoloTag(ruolo?: string) {
@@ -77,7 +78,7 @@ export default function SearchScreen() {
     <View style={styles.page}>
       {/* Search bar */}
       <View style={styles.searchBar}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <MaterialCommunityIcons name="magnify" size={20} color={C.textSoft} />
         <TextInput
           style={styles.searchInput}
           placeholder="Cerca utenti per username, nome…"
@@ -90,12 +91,11 @@ export default function SearchScreen() {
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={handleClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.clearIcon}>✕</Text>
+            <MaterialCommunityIcons name="close-circle" size={18} color={C.textMuted} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* States */}
       {loading && (
         <View style={styles.centered}>
           <ActivityIndicator color={C.primary} />
@@ -104,13 +104,14 @@ export default function SearchScreen() {
 
       {error !== '' && (
         <View style={styles.errorBox}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#B91C1C" />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
       {!loading && query.length >= 2 && results.length === 0 && error === '' && (
         <View style={styles.centered}>
-          <Text style={styles.emptyEmoji}>🔎</Text>
+          <MaterialCommunityIcons name="account-search-outline" size={48} color={C.textMuted} />
           <Text style={styles.emptyTitle}>Nessun risultato</Text>
           <Text style={styles.emptySubtitle}>Prova con un altro termine di ricerca</Text>
         </View>
@@ -122,7 +123,13 @@ export default function SearchScreen() {
         </View>
       )}
 
-      {/* Results */}
+      {query.length === 0 && (
+        <View style={styles.centered}>
+          <MaterialCommunityIcons name="account-group-outline" size={52} color={C.textMuted} />
+          <Text style={styles.hintText}>Cerca utenti della community</Text>
+        </View>
+      )}
+
       <FlatList
         data={results}
         keyExtractor={(item) => String(item.id)}
@@ -155,7 +162,7 @@ export default function SearchScreen() {
                   <Text style={styles.userStat}>{item.numSeguaci} seguaci</Text>
                 </View>
               </View>
-              <Text style={styles.chevron}>›</Text>
+              <MaterialCommunityIcons name="chevron-right" size={22} color={C.textMuted} />
             </TouchableOpacity>
           );
         }}
@@ -173,62 +180,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: C.card,
     margin: 16,
+    marginBottom: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 16,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: C.border,
     gap: 10,
-    shadowColor: '#1E293B',
+    shadowColor: '#1A2433',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
     elevation: 2,
   },
-  searchIcon: { fontSize: 16, color: C.textSoft },
   searchInput: {
     flex: 1,
     fontSize: 15,
     color: C.text,
     paddingVertical: 0,
   },
-  clearIcon: { fontSize: 14, color: C.textMuted, fontWeight: '600' },
 
   centered: {
     alignItems: 'center',
     paddingVertical: 48,
-    gap: 8,
+    gap: 10,
   },
-  emptyEmoji: { fontSize: 36 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: C.text },
   emptySubtitle: { fontSize: 13, color: C.textSoft },
   hintText: { fontSize: 13, color: C.textMuted, textAlign: 'center' },
 
   errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginHorizontal: 16,
+    marginBottom: 8,
     padding: 12,
     backgroundColor: '#FEF2F2',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FECACA',
   },
-  errorText: { fontSize: 13, color: '#B91C1C' },
+  errorText: { fontSize: 13, color: '#B91C1C', flex: 1 },
 
-  listContent: { paddingHorizontal: 16, paddingBottom: 32 },
+  listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
 
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: C.border,
     padding: 14,
     gap: 12,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowColor: '#1A2433',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
     elevation: 1,
   },
   avatar: {
@@ -240,7 +249,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   userInfo: { flex: 1, gap: 2 },
-  userNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  userNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   userName: { fontSize: 15, fontWeight: '700', color: C.text },
   userHandle: { fontSize: 13, color: C.textSoft },
   userStats: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
@@ -252,5 +261,4 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   roleTagText: { fontSize: 10, fontWeight: '700' },
-  chevron: { fontSize: 20, color: C.textMuted, fontWeight: '300' },
 });

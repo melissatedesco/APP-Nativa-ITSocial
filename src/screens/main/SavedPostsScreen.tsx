@@ -11,25 +11,26 @@ import {
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { MEDIA_BASE_URL } from '../../services/api';
 import { salvataggioService } from '../../services/salvataggioService';
 import { Post } from '../../types';
 
 const C = {
-  bg: '#F1F5F9',
-  card: '#FFFFFF',
-  border: '#E2E8F0',
-  text: '#1E293B',
-  textSoft: '#64748B',
-  textMuted: '#94A3B8',
-  primary: '#4A8FD4',
-  warm: '#F59E0B',
-  warmBg: '#FFFBEB',
-  danger: '#E53E3E',
+  bg: '#F8FAFC',
+  card: '#ffffff',
+  border: '#E8F0F5',
+  text: '#1A2433',
+  textSoft: '#6b7280',
+  textMuted: '#9ca3af',
+  primary: '#00ACC1',
+  warm: '#f59e0b',
+  warmBg: '#fffbeb',
+  danger: '#dc2626',
 } as const;
 
-const AVATAR_GRADIENT: [string, string] = ['#6BA3E0', '#2B5BA8'];
+const AVATAR_GRADIENT: [string, string] = ['#67E8F9', '#00ACC1'];
 
 function timeAgo(iso?: string): string {
   if (!iso) return '';
@@ -51,13 +52,7 @@ function getRuoloColor(ruolo?: string): string {
   return C.textMuted;
 }
 
-function SavedPostCard({
-  post,
-  onUnsave,
-}: {
-  post: Post;
-  onUnsave: (id: number) => void;
-}) {
+function SavedPostCard({ post, onUnsave }: { post: Post; onUnsave: (id: number) => void }) {
   const initials = (post.nomeUtente ?? '?')[0].toUpperCase();
   const images = post.allegati?.filter(a => a.tipo === 'IMAGE') ?? [];
 
@@ -89,14 +84,14 @@ function SavedPostCard({
           onPress={confirmUnsave}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={styles.unsaveBtnText}>🔖</Text>
+          <MaterialCommunityIcons name="bookmark" size={22} color={C.primary} />
         </TouchableOpacity>
       </View>
 
       {/* Content */}
       <Text style={styles.content} numberOfLines={6}>{post.contenuto}</Text>
 
-      {/* Image preview (single) */}
+      {/* Image preview */}
       {images.length > 0 && (
         <ExpoImage
           source={{ uri: MEDIA_BASE_URL + images[0].url }}
@@ -107,13 +102,16 @@ function SavedPostCard({
 
       {/* Footer stats */}
       <View style={styles.cardFooter}>
-        <Text style={styles.stat}>★  {post.numeroLike ?? 0}</Text>
-        <Text style={styles.statDot}>·</Text>
-        <Text style={styles.stat}>💬  {post.numeroCommenti ?? post.commenti?.length ?? 0}</Text>
+        <MaterialCommunityIcons name="star" size={14} color={C.warm} />
+        <Text style={styles.stat}>{post.numeroLike ?? 0}</Text>
+        <View style={styles.statDivider} />
+        <MaterialCommunityIcons name="comment-outline" size={14} color={C.textSoft} />
+        <Text style={styles.stat}>{post.numeroCommenti ?? post.commenti?.length ?? 0}</Text>
         {images.length > 1 && (
           <>
-            <Text style={styles.statDot}>·</Text>
-            <Text style={styles.stat}>📷  {images.length}</Text>
+            <View style={styles.statDivider} />
+            <MaterialCommunityIcons name="image-multiple-outline" size={14} color={C.textSoft} />
+            <Text style={styles.stat}>{images.length}</Text>
           </>
         )}
       </View>
@@ -172,8 +170,11 @@ export default function SavedPostsScreen() {
   if (error) {
     return (
       <View style={styles.centered}>
+        <MaterialCommunityIcons name="cloud-off-outline" size={52} color={C.textMuted} />
+        <Text style={styles.errorTitle}>Qualcosa è andato storto</Text>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => { setLoading(true); load(); }}>
+          <MaterialCommunityIcons name="refresh" size={16} color="#fff" />
           <Text style={styles.retryBtnText}>Riprova</Text>
         </TouchableOpacity>
       </View>
@@ -191,7 +192,7 @@ export default function SavedPostsScreen() {
       }
       ListEmptyComponent={
         <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>🔖</Text>
+          <MaterialCommunityIcons name="bookmark-outline" size={52} color={C.textMuted} />
           <Text style={styles.emptyTitle}>Nessun post salvato</Text>
           <Text style={styles.emptySubtitle}>
             Tocca il segnalibro su un post per salvarlo qui
@@ -210,27 +211,37 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
   listContent: { padding: 16, paddingBottom: 40 },
 
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: { fontSize: 14, color: C.danger, textAlign: 'center', paddingHorizontal: 24 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 32 },
+  errorTitle: { fontSize: 16, fontWeight: '700', color: C.text, textAlign: 'center' },
+  errorText: { fontSize: 13, color: C.textSoft, textAlign: 'center' },
   retryBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
     backgroundColor: C.primary,
     borderRadius: 999,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  retryBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  retryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
   postCard: {
     backgroundColor: C.card,
-    borderRadius: 18,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: C.border,
     overflow: 'hidden',
-    shadowColor: '#1E293B',
+    shadowColor: '#1A2433',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 1,
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 2,
   },
 
   cardHeader: {
@@ -251,9 +262,7 @@ const styles = StyleSheet.create({
   headerInfo: { flex: 1, gap: 2 },
   authorName: { fontSize: 14, fontWeight: '700', color: C.text },
   authorMeta: { fontSize: 11, color: C.textMuted },
-
   unsaveBtn: { padding: 4 },
-  unsaveBtnText: { fontSize: 18 },
 
   content: {
     fontSize: 14,
@@ -267,7 +276,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 14,
     marginBottom: 10,
     height: 180,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: C.border,
   },
 
@@ -281,14 +290,13 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
   },
   stat: { fontSize: 12, color: C.textSoft, fontWeight: '500' },
-  statDot: { fontSize: 12, color: C.textMuted },
+  statDivider: { width: 1, height: 12, backgroundColor: C.border, marginHorizontal: 2 },
 
   emptyState: {
     alignItems: 'center',
     paddingVertical: 80,
-    gap: 8,
+    gap: 10,
   },
-  emptyEmoji: { fontSize: 48 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
   emptySubtitle: { fontSize: 13, color: C.textSoft, textAlign: 'center', paddingHorizontal: 32 },
 });

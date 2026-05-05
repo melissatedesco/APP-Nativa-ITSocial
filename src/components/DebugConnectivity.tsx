@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-const HOST = 'http://192.168.1.100:8080';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { HOST } from '../config';
 
 type LogEntry = { ts: string; text: string; ok: boolean };
 
@@ -25,34 +25,31 @@ export default function DebugConnectivity() {
   }
 
   async function runFetch(label: string, url: string, init?: RequestInit) {
-    addLog(`→ ${label}  ${url}`, true);
+    addLog(`→ ${label}`, true);
+    addLog(`  ${url}`, true);
     const start = Date.now();
     try {
       const res = await fetch(url, { ...init, signal: AbortSignal.timeout(10000) });
       const body = await res.text().catch(() => '(body non leggibile)');
       const elapsed = Date.now() - start;
       addLog(`← ${res.status} ${res.statusText}  (${elapsed}ms)`, res.ok);
-      addLog(`   body: ${body.slice(0, 200)}`, res.ok);
+      if (body) addLog(`  ${body.slice(0, 200)}`, res.ok);
     } catch (e: any) {
       const elapsed = Date.now() - start;
-      addLog(`✗ ERRORE (${elapsed}ms): ${e?.message ?? String(e)}`, false);
-      addLog(`  name: ${e?.name}  code: ${e?.code ?? 'N/D'}`, false);
+      addLog(`✗ (${elapsed}ms): ${e?.message ?? String(e)}`, false);
+      addLog(`  name=${e?.name}  code=${e?.code ?? 'N/D'}`, false);
     }
+    addLog('', true);
   }
 
   async function runAll() {
     setBusy(true);
-    setLogs([]);
+    setLogs([{ ts: ts(), text: `Target: ${HOST}`, ok: true }]);
 
-    // 1. GET root del backend (nessun endpoint, risposta 404 è ok – conferma rete)
-    await runFetch('GET root', `${HOST}/`);
-
-    // 2. GET endpoint pubblico dei post
+    await runFetch('GET / (root, 404=ok)', `${HOST}/`);
     await runFetch('GET /api/post (pubblico)', `${HOST}/api/post`);
-
-    // 3. POST login con credenziali vuote (aspettiamo 401/400, non ERR_NETWORK)
     await runFetch(
-      'POST /api/auth/login (cred. vuote → 400/401)',
+      'POST /api/auth/login (cred. vuote → 400/401=ok)',
       `${HOST}/api/auth/login`,
       {
         method: 'POST',
@@ -67,25 +64,37 @@ export default function DebugConnectivity() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Debug Connettività</Text>
-      <Text style={styles.subtitle}>Target: {HOST}</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <MaterialCommunityIcons name="wifi-check" size={15} color="#00ACC1" />
+        <Text style={styles.title}>Debug connettività</Text>
+        <Text style={styles.target}>{HOST}</Text>
+      </View>
 
-      <TouchableOpacity style={styles.btn} onPress={runAll} disabled={busy}>
-        {busy
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.btnText}>Esegui test fetch()</Text>
-        }
+      <TouchableOpacity style={styles.btn} onPress={runAll} disabled={busy} activeOpacity={0.8}>
+        {busy ? (
+          <>
+            <ActivityIndicator color="#fff" size="small" />
+            <Text style={styles.btnText}>Test in corso…</Text>
+          </>
+        ) : (
+          <>
+            <MaterialCommunityIcons name="play-circle-outline" size={16} color="#fff" />
+            <Text style={styles.btnText}>Esegui test fetch()</Text>
+          </>
+        )}
       </TouchableOpacity>
 
-      <ScrollView style={styles.logBox} contentContainerStyle={{ padding: 10 }}>
-        {logs.length === 0 && (
-          <Text style={styles.logEmpty}>Premi il bottone per avviare i test.</Text>
+      <ScrollView style={styles.logBox} contentContainerStyle={styles.logContent}>
+        {logs.length === 0 ? (
+          <Text style={styles.logEmpty}>Premi il bottone per avviare i test di rete.</Text>
+        ) : (
+          logs.map((l, i) => (
+            <Text key={i} style={[styles.logLine, !l.ok && styles.logLineErr]}>
+              {l.ts ? `${l.ts}  ` : ''}{l.text}
+            </Text>
+          ))
         )}
-        {logs.map((l, i) => (
-          <Text key={i} style={[styles.logLine, !l.ok && styles.logLineErr]}>
-            {l.ts}  {l.text}
-          </Text>
-        ))}
       </ScrollView>
     </View>
   );
@@ -93,56 +102,76 @@ export default function DebugConnectivity() {
 
 const styles = StyleSheet.create({
   container: {
-    margin: 16,
-    backgroundColor: '#0F172A',
-    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 15,
+    borderWidth: 1.5,
+    borderColor: '#00ACC1',
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#334155',
+    shadowColor: '#00ACC1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   title: {
-    color: '#F1F5F9',
+    fontSize: 13,
     fontWeight: '700',
-    fontSize: 14,
-    padding: 12,
-    paddingBottom: 2,
-    fontFamily: 'monospace',
+    color: '#1A2433',
+    flex: 1,
   },
-  subtitle: {
-    color: '#64748B',
-    fontSize: 11,
-    paddingHorizontal: 12,
-    paddingBottom: 10,
+  target: {
+    fontSize: 10,
+    color: '#6b7280',
     fontFamily: 'monospace',
+    width: '100%',
+    paddingLeft: 21,
   },
+
   btn: {
-    marginHorizontal: 12,
-    marginBottom: 10,
-    backgroundColor: '#4A8FD4',
-    borderRadius: 8,
-    paddingVertical: 9,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginHorizontal: 14,
+    marginBottom: 10,
+    backgroundColor: '#00ACC1',
+    borderRadius: 10,
+    paddingVertical: 9,
   },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+
   logBox: {
-    backgroundColor: '#020617',
-    maxHeight: 260,
+    backgroundColor: '#EFF8FB',
+    maxHeight: 240,
+    borderTopWidth: 1,
+    borderTopColor: '#B2EBF2',
   },
+  logContent: { padding: 12 },
   logEmpty: {
-    color: '#475569',
+    color: '#9ca3af',
     fontSize: 12,
     fontFamily: 'monospace',
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: 16,
   },
   logLine: {
-    color: '#4ADE80',
-    fontSize: 11,
+    color: '#0097A7',
+    fontSize: 10,
     fontFamily: 'monospace',
-    marginBottom: 2,
+    marginBottom: 1,
     lineHeight: 16,
   },
   logLineErr: {
-    color: '#F87171',
+    color: '#dc2626',
   },
 });
