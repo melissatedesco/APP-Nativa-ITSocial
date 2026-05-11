@@ -14,19 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProfiloDto, MainStackParamList } from '../../types';
 import { userService } from '../../services/userService';
-
-const C = {
-  bg: '#F1F5F9',
-  card: '#FFFFFF',
-  border: '#E2E8F0',
-  text: '#1E293B',
-  textSoft: '#64748B',
-  textMuted: '#94A3B8',
-  primary: '#4A8FD4',
-  primaryDark: '#2D6BB5',
-  } as const;
-  
-const AVATAR_GRADIENT: [string, string] = ['#6BA3E0', '#2B5BA8'];
+import { useTheme, ThemeColors } from '../../context/ThemeContext';
 
 function getRuoloTag(ruolo?: string) {
   if (!ruolo) return null;
@@ -37,8 +25,103 @@ function getRuoloTag(ruolo?: string) {
   return null;
 }
 
+const makeStyles = (C: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: C.bg },
+
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    margin: 16,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: C.border,
+    gap: 10,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: C.text,
+    paddingVertical: 0,
+  },
+
+  centered: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    gap: 10,
+  },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: C.text },
+  emptySubtitle: { fontSize: 13, color: C.textSoft },
+  hintText: { fontSize: 13, color: C.textMuted, textAlign: 'center' },
+
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 12,
+    backgroundColor: C.dangerBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.danger + '40',
+  },
+  errorText: { fontSize: 13, color: C.danger, flex: 1 },
+
+  listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
+
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 14,
+    gap: 12,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  userInfo: { flex: 1, gap: 2 },
+  userNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  userName: { fontSize: 15, fontWeight: '700', color: C.text },
+  userHandle: { fontSize: 13, color: C.textSoft },
+  userStats: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  userStat: { fontSize: 11, color: C.textMuted },
+  userStatDot: { fontSize: 11, color: C.textMuted },
+  roleTag: {
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  roleTagText: { fontSize: 10, fontWeight: '700' },
+});
+
 export default function SearchScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
+  const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
+
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProfiloDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -104,7 +187,7 @@ export default function SearchScreen() {
 
       {error !== '' && (
         <View style={styles.errorBox}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#B91C1C" />
+          <MaterialCommunityIcons name="alert-circle-outline" size={16} color={C.danger} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
@@ -171,94 +254,3 @@ export default function SearchScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: C.bg },
-
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.card,
-    margin: 16,
-    marginBottom: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 10,
-    shadowColor: '#1A2433',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: C.text,
-    paddingVertical: 0,
-  },
-
-  centered: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    gap: 10,
-  },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: C.text },
-  emptySubtitle: { fontSize: 13, color: C.textSoft },
-  hintText: { fontSize: 13, color: C.textMuted, textAlign: 'center' },
-
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 12,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  errorText: { fontSize: 13, color: '#B91C1C', flex: 1 },
-
-  listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
-
-  userCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.card,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    gap: 12,
-    shadowColor: '#1A2433',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  userInfo: { flex: 1, gap: 2 },
-  userNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  userName: { fontSize: 15, fontWeight: '700', color: C.text },
-  userHandle: { fontSize: 13, color: C.textSoft },
-  userStats: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  userStat: { fontSize: 11, color: C.textMuted },
-  userStatDot: { fontSize: 11, color: C.textMuted },
-  roleTag: {
-    borderRadius: 999,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  roleTagText: { fontSize: 10, fontWeight: '700' },
-});

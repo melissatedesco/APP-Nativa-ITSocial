@@ -16,28 +16,125 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/UserContext';
+import { useTheme, ThemeColors } from '../../context/ThemeContext';
 
-const C = {
-  bg: '#F8FAFC',
-  card: '#ffffff',
-  border: '#E8F0F5',
-  text: '#1A2433',
-  textSoft: '#6b7280',
-  textMuted: '#9ca3af',
-  primary: '#00ACC1',
-  primaryDark: '#0097A7',
-  danger: '#dc2626',
-  dangerBg: '#FEF2F2',
-  dangerBorder: '#FECACA',
-} as const;
-
-const AVATAR_GRADIENT: [string, string] = ['#67E8F9', '#00ACC1'];
 const AVATAR_SIZE = 96;
+
+const makeStyles = (C: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: C.bg },
+  scrollContent: {
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    gap: 24,
+    alignItems: 'center',
+  },
+
+  avatarSection: { alignItems: 'center', gap: 8 },
+  avatarWrap: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    overflow: 'hidden',
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  avatarImg: { width: '100%', height: '100%' },
+  avatarGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  avatarLetter: { color: '#fff', fontSize: 36, fontWeight: '800' },
+  avatarHint: { fontSize: 12, color: C.textSoft },
+
+  formCard: {
+    width: '100%',
+    backgroundColor: C.card,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 24,
+    gap: 20,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+
+  field: { gap: 6 },
+  label: { fontSize: 13, fontWeight: '600', color: C.text },
+  input: {
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    backgroundColor: C.inputBg,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    borderRadius: 12,
+    fontSize: 14,
+    color: C.text,
+  },
+  bioInput: {
+    minHeight: 96,
+    paddingTop: 11,
+  },
+  charCount: { fontSize: 11, color: C.textMuted, alignSelf: 'flex-end' },
+
+  alertError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: C.dangerBg,
+    borderWidth: 1,
+    borderColor: C.danger + '40',
+    borderRadius: 12,
+  },
+  alertErrorText: { fontSize: 13, color: C.danger, fontWeight: '500', flex: 1 },
+
+  alertSuccess: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: '#D1FAE5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 12,
+  },
+  alertSuccessText: { fontSize: 13, color: '#065F46', fontWeight: '600' },
+
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    backgroundColor: C.primary,
+    borderRadius: 9999,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  saveBtnDisabled: { opacity: 0.5 },
+  saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  cancelBtn: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  cancelBtnText: { fontSize: 14, color: C.textSoft, fontWeight: '500' },
+});
 
 export default function EditProfileScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { profile, loadProfile, updateProfile } = useProfile();
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
+
+  const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
 
   const [nome, setNome] = useState('');
   const [cognome, setCognome] = useState('');
@@ -98,7 +195,7 @@ export default function EditProfileScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
         style={styles.page}
@@ -226,110 +323,3 @@ export default function EditProfileScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: C.bg },
-  scrollContent: {
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    gap: 24,
-    alignItems: 'center',
-  },
-
-  avatarSection: { alignItems: 'center', gap: 8 },
-  avatarWrap: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    overflow: 'hidden',
-    shadowColor: '#1A2433',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  avatarImg: { width: '100%', height: '100%' },
-  avatarGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  avatarLetter: { color: '#fff', fontSize: 36, fontWeight: '800' },
-  avatarHint: { fontSize: 12, color: C.textSoft },
-
-  formCard: {
-    width: '100%',
-    backgroundColor: C.card,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 24,
-    gap: 20,
-    shadowColor: '#1A2433',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-
-  field: { gap: 6 },
-  label: { fontSize: 13, fontWeight: '600', color: C.text },
-  input: {
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    backgroundColor: C.bg,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    borderRadius: 12,
-    fontSize: 14,
-    color: C.text,
-  },
-  bioInput: {
-    minHeight: 96,
-    paddingTop: 11,
-  },
-  charCount: { fontSize: 11, color: C.textMuted, alignSelf: 'flex-end' },
-
-  alertError: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    backgroundColor: C.dangerBg,
-    borderWidth: 1,
-    borderColor: C.dangerBorder,
-    borderRadius: 12,
-  },
-  alertErrorText: { fontSize: 13, color: C.danger, fontWeight: '500', flex: 1 },
-
-  alertSuccess: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    backgroundColor: '#D1FAE5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-    borderRadius: 12,
-  },
-  alertSuccessText: { fontSize: 13, color: '#065F46', fontWeight: '600' },
-
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
-    backgroundColor: C.primary,
-    borderRadius: 9999,
-    shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-
-  cancelBtn: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  cancelBtnText: { fontSize: 14, color: C.textSoft, fontWeight: '500' },
-});

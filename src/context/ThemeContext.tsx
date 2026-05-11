@@ -10,6 +10,7 @@ export interface ThemeColors {
   textMuted: string;
   primary: string;
   primaryDark: string;
+  brand: string;
   warm: string;
   warmBg: string;
   danger: string;
@@ -19,20 +20,21 @@ export interface ThemeColors {
 }
 
 export const lightColors: ThemeColors = {
-  bg: '#F8FAFC',
+  bg: '#F1F5F9',
   card: '#ffffff',
-  border: '#e0f7fa',
-  text: '#1A2433',
-  textSoft: '#6b7280',
-  textMuted: '#9ca3af',
-  primary: '#00bcd4',
-  primaryDark: '#0097a7',
+  border: '#E2E8F0',
+  text: '#1E293B',
+  textSoft: '#64748B',
+  textMuted: '#94A3B8',
+  primary: '#4A8FD4',
+  primaryDark: '#2D6BB5',
+  brand: '#2B5BA8',
   warm: '#f59e0b',
   warmBg: 'rgba(245,158,11,0.10)',
   danger: '#ef4444',
   dangerBg: '#FEF2F2',
-  inputBg: '#F0FBFC',
-  saveBg: 'rgba(0,188,212,0.10)',
+  inputBg: '#ffffff',
+  saveBg: 'rgba(74,143,212,0.10)',
 };
 
 export const darkColors: ThemeColors = {
@@ -44,6 +46,7 @@ export const darkColors: ThemeColors = {
   textMuted: '#4a6580',
   primary: '#00bcd4',
   primaryDark: '#0097a7',
+  brand: '#4A8FD4',
   warm: '#f59e0b',
   warmBg: 'rgba(245,158,11,0.15)',
   danger: '#ef4444',
