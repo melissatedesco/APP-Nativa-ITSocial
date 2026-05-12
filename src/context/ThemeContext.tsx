@@ -38,28 +38,28 @@ export const lightColors: ThemeColors = {
 };
 
 export const darkColors: ThemeColors = {
-  bg: '#0b141e',
+  bg: '#0D1B2E',
   card: '#16222e',
   border: '#1e3448',
   text: '#ffffff',
   textSoft: '#94a3b8',
   textMuted: '#4a6580',
-  primary: '#00bcd4',
-  primaryDark: '#0097a7',
-  brand: '#4A8FD4',
+  primary: '#4A8FD4',
+  primaryDark: '#3a7fc4',
+  brand: '#2B5BA8',
   warm: '#f59e0b',
   warmBg: 'rgba(245,158,11,0.15)',
   danger: '#ef4444',
   dangerBg: 'rgba(239,68,68,0.15)',
   inputBg: '#0d1b27',
-  saveBg: 'rgba(0,188,212,0.12)',
+  saveBg: 'rgba(74,143,212,0.12)',
 };
 
 // Badge colors – RGBA, leggibili su entrambi i temi
 export function getRuoloBadge(ruolo?: string) {
   const r = (ruolo ?? '').toUpperCase();
   if (r.includes('ADMIN'))      return { label: 'Admin',      bg: 'rgba(239,68,68,0.15)',   text: '#ef4444',  border: 'rgba(239,68,68,0.35)' };
-  if (r.includes('PROFESSORE')) return { label: 'Professore', bg: 'rgba(0,188,212,0.15)',   text: '#00bcd4',  border: 'rgba(0,188,212,0.35)' };
+  if (r.includes('PROFESSORE')) return { label: 'Professore', bg: 'rgba(74,143,212,0.15)',  text: '#4A8FD4',  border: 'rgba(74,143,212,0.35)' };
   if (r.includes('STUDENTE'))   return { label: 'Studente',   bg: 'rgba(74,222,128,0.15)',  text: '#16a34a',  border: 'rgba(74,222,128,0.35)' };
   return { label: ruolo || 'Utente', bg: 'rgba(148,163,184,0.15)', text: '#64748b', border: 'rgba(148,163,184,0.30)' };
 }

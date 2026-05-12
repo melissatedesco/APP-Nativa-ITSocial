@@ -24,6 +24,18 @@ function parseAuthError(err: unknown): Error {
     if (serverMessage) return new Error(serverMessage);
     if (status >= 500) return new Error('Errore del server. Riprova più tardi.');
   }
+
+  // Plain Error from loginWithFetch (fetch fallback)
+  if (err instanceof Error) {
+    const httpStatus = (err as any).status as number | undefined;
+    if (httpStatus === 401) return new Error('Credenziali non valide. Controlla username e password.');
+    if (httpStatus === 403) return new Error('Accesso negato.');
+    if (httpStatus === 404) return new Error('Utente non trovato.');
+    if (httpStatus && httpStatus >= 500) return new Error('Errore del server. Riprova più tardi.');
+    // Fetch network failure (CORS, server offline, ecc.)
+    return new Error('Impossibile raggiungere il server. Controlla la connessione.');
+  }
+
   return new Error('Si è verificato un errore imprevisto.');
 }
 

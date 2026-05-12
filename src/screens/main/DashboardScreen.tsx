@@ -260,7 +260,134 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     elevation: 4,
   },
   gridCardLabel: { fontSize: 14, fontWeight: '800', color: '#fff', marginTop: 6 },
+
+  // ─ Right sidebar glassmorphism
+  sidebar: {
+    position: 'absolute',
+    right: 12,
+    zIndex: 100,
+  },
+  sidebarGlass: {
+    borderRadius: 28,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: -2, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 12,
+    gap: 4,
+    alignItems: 'center',
+  },
+  sidebarBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sidebarBtnActive: {
+    backgroundColor: 'rgba(74,143,212,0.15)',
+  },
+  sidebarSep: {
+    height: 1,
+    width: 28,
+    backgroundColor: 'rgba(74,143,212,0.20)',
+    marginVertical: 4,
+  },
 });
+
+// ── SidebarDashboard ──────────────────────────────────────────────────────────
+
+const CLASS_ICONS: React.ComponentProps<typeof MaterialCommunityIcons>['name'][] = [
+  'school-outline',
+  'book-open-outline',
+  'clipboard-text-outline',
+  'flask-outline',
+];
+
+function SidebarDashboard({
+  classes,
+  topOffset,
+  onSmarTina,
+  onClassPress,
+  onMessages,
+  onMyClass,
+}: {
+  classes: IscrizioneClasseDto[];
+  topOffset: number;
+  onSmarTina: () => void;
+  onClassPress: (classeId: number) => void;
+  onMessages: () => void;
+  onMyClass: () => void;
+}) {
+  const { colors: C, isDark } = useTheme();
+  const styles = makeStyles(C);
+
+  const glassStyle = {
+    backgroundColor: isDark ? 'rgba(13,27,46,0.84)' : 'rgba(255,255,255,0.84)',
+    borderColor: isDark ? 'rgba(74,143,212,0.22)' : 'rgba(74,143,212,0.30)',
+  };
+  const iconColor = '#4A8FD4';
+
+  return (
+    <View style={[styles.sidebar, { top: topOffset }]}>
+      <View style={[styles.sidebarGlass, glassStyle]}>
+
+        {/* SmarTina – azione primaria */}
+        <TouchableOpacity
+          style={[styles.sidebarBtn, styles.sidebarBtnActive]}
+          onPress={onSmarTina}
+          activeOpacity={0.75}
+        >
+          <Image source={require('../../../assets/smartina.png')} style={{ width: 28, height: 28 }} resizeMode="contain" />
+        </TouchableOpacity>
+
+        <View style={styles.sidebarSep} />
+
+        {/* Icone classi */}
+        {classes.length === 0 ? (
+          <TouchableOpacity
+            style={[styles.sidebarBtn, { opacity: 0.35 }]}
+            onPress={onMyClass}
+            activeOpacity={0.75}
+          >
+            <MaterialCommunityIcons name="school-outline" size={22} color={iconColor} />
+          </TouchableOpacity>
+        ) : (
+          classes.slice(0, 4).map((cls, i) => (
+            <TouchableOpacity
+              key={cls.id}
+              style={styles.sidebarBtn}
+              onPress={() => onClassPress(cls.id)}
+              activeOpacity={0.75}
+            >
+              <MaterialCommunityIcons
+                name={CLASS_ICONS[i % CLASS_ICONS.length]}
+                size={22}
+                color={iconColor}
+              />
+            </TouchableOpacity>
+          ))
+        )}
+
+        <View style={styles.sidebarSep} />
+
+        {/* Tutte le classi */}
+        <TouchableOpacity style={styles.sidebarBtn} onPress={onMyClass} activeOpacity={0.75}>
+          <MaterialCommunityIcons name="view-grid-outline" size={22} color={iconColor} />
+        </TouchableOpacity>
+
+        {/* Messaggi */}
+        <TouchableOpacity style={styles.sidebarBtn} onPress={onMessages} activeOpacity={0.75}>
+          <MaterialCommunityIcons name="message-outline" size={22} color={iconColor} />
+        </TouchableOpacity>
+
+      </View>
+    </View>
+  );
+}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -451,13 +578,13 @@ export default function DashboardScreen() {
             onPress={() => navigation.navigate('SmartinaChat')}
           >
             <LinearGradient
-              colors={['#6366F1', '#4F46E5']}
+              colors={['#2B5BA8', '#1a3768']}
               start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={styles.smartinaCard}
             >
               <View style={styles.smartinaAvatar}>
-                <MaterialCommunityIcons name="robot-outline" size={26} color="#fff" />
+                <Image source={require('../../../assets/smartina.png')} style={{ width: 36, height: 36 }} resizeMode="contain" />
               </View>
               <View style={styles.smartinaBody}>
                 <Text style={styles.smartinaTitle}>Smartina</Text>
@@ -476,7 +603,7 @@ export default function DashboardScreen() {
             onPress={() => navigation.navigate('Messages')}
           >
             <LinearGradient
-              colors={['#0EA5E9', '#0284C7']}
+              colors={['#4A8FD4', '#2D6BB5']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.gridCard}
@@ -511,6 +638,16 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* ── Right Sidebar ─────────────────────────────────────────────────── */}
+      <SidebarDashboard
+        classes={classi}
+        topOffset={insets.top + 68}
+        onSmarTina={() => navigation.navigate('SmartinaChat')}
+        onClassPress={() => navigation.navigate('MyClass')}
+        onMessages={() => navigation.navigate('Messages')}
+        onMyClass={() => navigation.navigate('MyClass')}
+      />
     </View>
   );
 }
