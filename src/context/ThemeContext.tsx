@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 export interface ThemeColors {
   bg: string;
@@ -55,7 +55,6 @@ export const darkColors: ThemeColors = {
   saveBg: 'rgba(74,143,212,0.12)',
 };
 
-// Badge colors – RGBA, leggibili su entrambi i temi
 export function getRuoloBadge(ruolo?: string) {
   const r = (ruolo ?? '').toUpperCase();
   if (r.includes('ADMIN'))      return { label: 'Admin',      bg: 'rgba(239,68,68,0.15)',   text: '#ef4444',  border: 'rgba(239,68,68,0.35)' };
@@ -76,23 +75,85 @@ const ThemeContext = createContext<ThemeContextValue>({
   toggleTheme: () => {},
 });
 
-const STORAGE_KEY = '@itsocial_theme';
+// ── Storage keys ───────────────────────────────────────────────────────────────
+const WEB_KEY    = 'theme';           // localStorage key (web)
+const NATIVE_KEY = '@itsocial_theme'; // AsyncStorage key (native)
+
+// ── Platform-aware helpers ─────────────────────────────────────────────────────
+
+// Web: lettura sincrona → nessun flash al primo render
+function webReadSync(): boolean {
+  try {
+    if (typeof localStorage === 'undefined') return true;
+    const val = localStorage.getItem(WEB_KEY);
+    return val !== null ? val === 'dark' : true;
+  } catch {
+    return true;
+  }
+}
+
+function webSave(isDark: boolean): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(WEB_KEY, isDark ? 'dark' : 'light');
+    }
+  } catch {}
+}
+
+// Native: AsyncStorage caricato dinamicamente per evitare errori di import su web
+async function nativeRead(): Promise<boolean | null> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const AS = require('@react-native-async-storage/async-storage').default;
+    const val: string | null = await AS.getItem(NATIVE_KEY);
+    return val !== null ? val === 'dark' : null;
+  } catch {
+    return null;
+  }
+}
+
+function nativeSave(isDark: boolean): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const AS = require('@react-native-async-storage/async-storage').default;
+    AS.setItem(NATIVE_KEY, isDark ? 'dark' : 'light').catch(() => {});
+  } catch {}
+}
+
+// ── Provider ───────────────────────────────────────────────────────────────────
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(true);
+  const isWeb = Platform.OS === 'web';
 
+  // Web: stato iniziale letto in modo sincrono → nessun flash
+  // Native: default dark, poi aggiornato dall'AsyncStorage in useEffect
+  const [isDark, setIsDark] = useState<boolean>(() => (isWeb ? webReadSync() : true));
+
+  // Solo per native: traccia il completamento del caricamento asincrono
+  const [nativeLoaded, setNativeLoaded] = useState(false);
+
+  // Native only: legge AsyncStorage una volta al mount
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then(val => { if (val !== null) setIsDark(val === 'dark'); })
-      .catch(() => {});
-  }, []);
+    if (isWeb) return;
+    nativeRead().then(val => {
+      if (val !== null) setIsDark(val);
+      setNativeLoaded(true);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Salva il tema ogni volta che cambia
+  useEffect(() => {
+    if (isWeb) {
+      webSave(isDark);
+    } else {
+      // Su native aspetta il caricamento iniziale per non sovrascrivere il valore salvato
+      if (!nativeLoaded) return;
+      nativeSave(isDark);
+    }
+  }, [isDark, nativeLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleTheme = useCallback(() => {
-    setIsDark(prev => {
-      const next = !prev;
-      AsyncStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light').catch(() => {});
-      return next;
-    });
+    setIsDark(prev => !prev);
   }, []);
 
   return (

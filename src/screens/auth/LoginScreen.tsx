@@ -204,15 +204,15 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 28,
   },
-  logo: { width: 78, height: 78 },
-  brandName: { fontWeight: '800', fontSize: 26, letterSpacing: -0.4, color: C.primary },
+  logo: { width: 90, height: 90 },
+  brandName: { fontWeight: '800', fontSize: 28, letterSpacing: -0.4, color: C.primary },
 
   title: {
     fontWeight: '800',
     fontSize: 26,
     letterSpacing: -0.5,
     textAlign: 'center',
-    color: C.text,
+    color: '#000000',
     marginBottom: 6,
   },
   subtitle: {

@@ -28,6 +28,7 @@ import { commentoService } from '../../services/commentoService';
 import { sondaggioService } from '../../services/sondaggioService';
 import { Post, CommentoDto, SondaggioDto, MainStackParamList } from '../../types';
 import { useFeed, FeedTab } from '../../hooks/useFeed';
+import { SharedSidebar } from '../../components/SharedSidebar';
 
 function timeAgo(iso?: string): string {
   if (!iso) return '';
@@ -143,8 +144,9 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   pollMetaScaduto: { color: C.danger },
 
   smartinaBannerWrap: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4 },
-  smartinaBanner: { borderRadius: 20, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  smartinaAvatarCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 },
+  smartinaBanner: { borderRadius: 28, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  smartinaAvatarCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0, borderWidth: 2, borderColor: C.primary, overflow: 'hidden' },
+  smartinaAvatarImg: { width: 44, height: 44 },
   smartinaOnlineDot: { position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: 5, backgroundColor: '#4ade80', borderWidth: 2, borderColor: '#0f2545' },
   smartinaInfo: { flex: 1, gap: 2 },
   smartinaNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -572,7 +574,7 @@ function SmarTinaBanner({ onPress }: { onPress: () => void }) {
         style={styles.smartinaBanner}
       >
         <View style={styles.smartinaAvatarCircle}>
-          <MaterialCommunityIcons name="robot-happy-outline" size={24} color="#fff" />
+          <Image source={require('../../../assets/smartina.png')} style={styles.smartinaAvatarImg} />
           <View style={styles.smartinaOnlineDot} />
         </View>
         <View style={styles.smartinaInfo}>
@@ -622,51 +624,54 @@ export default function HomeScreen() {
   );
 
   return (
-    <FlatList
-      data={isLoading ? [] : posts}
-      keyExtractor={(item) => String(item.id)}
-      style={styles.page}
-      contentContainerStyle={styles.listContent}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={C.primary} />}
-      ListHeaderComponent={ListHeader}
-      onEndReached={loadMore}
-      onEndReachedThreshold={0.4}
-      ListEmptyComponent={
-        !isLoading ? (
-          feedError ? (
-            <View style={styles.errorState}>
-              <Text style={styles.errorStateEmoji}>😕</Text>
-              <Text style={styles.errorStateTitle}>Impossibile caricare il feed</Text>
-              <Text style={styles.errorStateMessage}>{feedError}</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={refresh} activeOpacity={0.8}>
-                <Text style={styles.retryBtnText}>Riprova</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📭</Text>
-              <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
-              <Text style={styles.emptySubtitle}>
-                {tab === 'seguiti' ? 'Segui altri utenti per vedere i loro post.' : tab === 'tendenze' ? 'Non ci sono post in tendenza.' : 'Sii il primo a pubblicare qualcosa!'}
-              </Text>
-            </View>
-          )
-        ) : null
-      }
-      ListFooterComponent={isLoadingMore ? <View style={styles.loadingMore}><ActivityIndicator color={C.primary} size="small" /></View> : null}
-      renderItem={({ item }) => (
-        <PostCard
-          post={item}
-          liked={likedIds.has(item.id)}
-          saved={savedIds.has(item.id)}
-          onLike={toggleLike}
-          onSave={toggleSave}
-          onDelete={deletePost}
-          onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
-          currentUsername={currentUsername}
-        />
-      )}
-      ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-    />
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={isLoading ? [] : posts}
+        keyExtractor={(item) => String(item.id)}
+        style={styles.page}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={C.primary} />}
+        ListHeaderComponent={ListHeader}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        ListEmptyComponent={
+          !isLoading ? (
+            feedError ? (
+              <View style={styles.errorState}>
+                <Text style={styles.errorStateEmoji}>😕</Text>
+                <Text style={styles.errorStateTitle}>Impossibile caricare il feed</Text>
+                <Text style={styles.errorStateMessage}>{feedError}</Text>
+                <TouchableOpacity style={styles.retryBtn} onPress={refresh} activeOpacity={0.8}>
+                  <Text style={styles.retryBtnText}>Riprova</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>📭</Text>
+                <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
+                <Text style={styles.emptySubtitle}>
+                  {tab === 'seguiti' ? 'Segui altri utenti per vedere i loro post.' : tab === 'tendenze' ? 'Non ci sono post in tendenza.' : 'Sii il primo a pubblicare qualcosa!'}
+                </Text>
+              </View>
+            )
+          ) : null
+        }
+        ListFooterComponent={isLoadingMore ? <View style={styles.loadingMore}><ActivityIndicator color={C.primary} size="small" /></View> : null}
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            liked={likedIds.has(item.id)}
+            saved={savedIds.has(item.id)}
+            onLike={toggleLike}
+            onSave={toggleSave}
+            onDelete={deletePost}
+            onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
+            currentUsername={currentUsername}
+          />
+        )}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+      />
+      <SharedSidebar extraTopOffset={10} />
+    </View>
   );
 }
