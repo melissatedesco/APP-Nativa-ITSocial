@@ -28,6 +28,7 @@ import { commentoService } from '../../services/commentoService';
 import { sondaggioService } from '../../services/sondaggioService';
 import { Post, CommentoDto, SondaggioDto, MainStackParamList } from '../../types';
 import { useFeed, FeedTab } from '../../hooks/useFeed';
+import { SharedSidebar } from '../../components/SharedSidebar';
 
 function timeAgo(iso?: string): string {
   if (!iso) return '';
@@ -78,7 +79,7 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
 
   feedLoading: { paddingVertical: 24, alignItems: 'center' },
 
-  postCard: { marginHorizontal: 12, backgroundColor: C.card, borderRadius: 15, borderWidth: 1, borderColor: C.border, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 2 },
+  postCard: { marginHorizontal: 12, backgroundColor: C.card, borderRadius: 28, borderWidth: 1, borderColor: C.border, overflow: 'hidden', shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
   postHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, paddingBottom: 0 },
   postHeaderInfo: { flex: 1, gap: 2 },
   postHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
@@ -97,7 +98,7 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
 
   postActions: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.border, marginTop: 10, gap: 4 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999 },
-  actionBtnActive: { backgroundColor: 'rgba(0,188,212,0.10)' },
+  actionBtnActive: { backgroundColor: 'rgba(74,143,212,0.10)' },
   actionBtnSaved: { backgroundColor: C.saveBg },
   actionCount: { fontSize: 13, color: C.textSoft, fontWeight: '500' },
   actionCountLiked: { color: C.warm, fontWeight: '700' },
@@ -131,8 +132,8 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   pollVoteError: { fontSize: 12, color: C.danger, fontWeight: '500', marginTop: 2 },
   pollResultRow: { gap: 4 },
   pollBarWrap: { borderRadius: 8, overflow: 'hidden', backgroundColor: C.border, height: 34, position: 'relative', justifyContent: 'center' },
-  pollBar: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,188,212,0.18)', borderRadius: 8 },
-  pollBarVoted: { backgroundColor: 'rgba(0,188,212,0.35)' },
+  pollBar: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: 'rgba(74,143,212,0.18)', borderRadius: 8 },
+  pollBarVoted: { backgroundColor: 'rgba(74,143,212,0.35)' },
   pollBarLabel: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10 },
   pollOptionText: { fontSize: 13, color: C.textSoft, fontWeight: '500' },
   pollOptionTextVoted: { color: C.primary, fontWeight: '700' },
@@ -141,6 +142,19 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   pollMetaText: { fontSize: 11, color: C.textMuted },
   pollMetaDot: { fontSize: 11, color: C.textMuted },
   pollMetaScaduto: { color: C.danger },
+
+  smartinaBannerWrap: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4 },
+  smartinaBanner: { borderRadius: 28, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  smartinaAvatarCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0, borderWidth: 2, borderColor: C.primary, overflow: 'hidden' },
+  smartinaAvatarImg: { width: 44, height: 44 },
+  smartinaOnlineDot: { position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: 5, backgroundColor: '#4ade80', borderWidth: 2, borderColor: '#0f2545' },
+  smartinaInfo: { flex: 1, gap: 2 },
+  smartinaNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  smartinaName: { fontSize: 13, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
+  smartinaStatus: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 2 },
+  smartinaMsg: { fontSize: 13, color: 'rgba(255,255,255,0.88)', lineHeight: 18 },
+  smartinaCta: { backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, flexShrink: 0 },
+  smartinaCtaText: { fontSize: 12, fontWeight: '600', color: '#fff' },
 
   emptyState: { alignItems: 'center', paddingVertical: 64, gap: 8 },
   emptyEmoji: { fontSize: 40 },
@@ -547,6 +561,38 @@ function Composer({ username, onPublish }: { username: string; onPublish: (text:
   );
 }
 
+// ─── SmarTinaBanner ───────────────────────────────────────────────────────────
+function SmarTinaBanner({ onPress }: { onPress: () => void }) {
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.smartinaBannerWrap}>
+      <LinearGradient
+        colors={['#2B5BA8', '#0f2545']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.smartinaBanner}
+      >
+        <View style={styles.smartinaAvatarCircle}>
+          <Image source={require('../../../assets/smartina.png')} style={styles.smartinaAvatarImg} />
+          <View style={styles.smartinaOnlineDot} />
+        </View>
+        <View style={styles.smartinaInfo}>
+          <View style={styles.smartinaNameRow}>
+            <Text style={styles.smartinaName}>SmarTina</Text>
+            <MaterialCommunityIcons name="check-decagram" size={12} color="rgba(255,255,255,0.7)" />
+          </View>
+          <Text style={styles.smartinaStatus}>Online · pronta ad aiutarti</Text>
+          <Text style={styles.smartinaMsg}>Ciao, sono SmarTina. In cosa ti posso essere utile?</Text>
+        </View>
+        <View style={styles.smartinaCta}>
+          <Text style={styles.smartinaCtaText}>Chatta →</Text>
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
 // ─── HomeScreen ───────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -558,6 +604,7 @@ export default function HomeScreen() {
 
   const ListHeader = (
     <View>
+      <SmarTinaBanner onPress={() => navigation.navigate('SmartinaChat')} />
       <View style={styles.tabBar}>
         {(['pertе', 'seguiti', 'tendenze'] as FeedTab[]).map((t) => (
           <TouchableOpacity key={t} style={[styles.tabBtn, tab === t && styles.tabBtnActive]} onPress={() => changeTab(t)} activeOpacity={0.8}>
@@ -577,51 +624,54 @@ export default function HomeScreen() {
   );
 
   return (
-    <FlatList
-      data={isLoading ? [] : posts}
-      keyExtractor={(item) => String(item.id)}
-      style={styles.page}
-      contentContainerStyle={styles.listContent}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={C.primary} />}
-      ListHeaderComponent={ListHeader}
-      onEndReached={loadMore}
-      onEndReachedThreshold={0.4}
-      ListEmptyComponent={
-        !isLoading ? (
-          feedError ? (
-            <View style={styles.errorState}>
-              <Text style={styles.errorStateEmoji}>😕</Text>
-              <Text style={styles.errorStateTitle}>Impossibile caricare il feed</Text>
-              <Text style={styles.errorStateMessage}>{feedError}</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={refresh} activeOpacity={0.8}>
-                <Text style={styles.retryBtnText}>Riprova</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📭</Text>
-              <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
-              <Text style={styles.emptySubtitle}>
-                {tab === 'seguiti' ? 'Segui altri utenti per vedere i loro post.' : tab === 'tendenze' ? 'Non ci sono post in tendenza.' : 'Sii il primo a pubblicare qualcosa!'}
-              </Text>
-            </View>
-          )
-        ) : null
-      }
-      ListFooterComponent={isLoadingMore ? <View style={styles.loadingMore}><ActivityIndicator color={C.primary} size="small" /></View> : null}
-      renderItem={({ item }) => (
-        <PostCard
-          post={item}
-          liked={likedIds.has(item.id)}
-          saved={savedIds.has(item.id)}
-          onLike={toggleLike}
-          onSave={toggleSave}
-          onDelete={deletePost}
-          onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
-          currentUsername={currentUsername}
-        />
-      )}
-      ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-    />
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={isLoading ? [] : posts}
+        keyExtractor={(item) => String(item.id)}
+        style={styles.page}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={C.primary} />}
+        ListHeaderComponent={ListHeader}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        ListEmptyComponent={
+          !isLoading ? (
+            feedError ? (
+              <View style={styles.errorState}>
+                <Text style={styles.errorStateEmoji}>😕</Text>
+                <Text style={styles.errorStateTitle}>Impossibile caricare il feed</Text>
+                <Text style={styles.errorStateMessage}>{feedError}</Text>
+                <TouchableOpacity style={styles.retryBtn} onPress={refresh} activeOpacity={0.8}>
+                  <Text style={styles.retryBtnText}>Riprova</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>📭</Text>
+                <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
+                <Text style={styles.emptySubtitle}>
+                  {tab === 'seguiti' ? 'Segui altri utenti per vedere i loro post.' : tab === 'tendenze' ? 'Non ci sono post in tendenza.' : 'Sii il primo a pubblicare qualcosa!'}
+                </Text>
+              </View>
+            )
+          ) : null
+        }
+        ListFooterComponent={isLoadingMore ? <View style={styles.loadingMore}><ActivityIndicator color={C.primary} size="small" /></View> : null}
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            liked={likedIds.has(item.id)}
+            saved={savedIds.has(item.id)}
+            onLike={toggleLike}
+            onSave={toggleSave}
+            onDelete={deletePost}
+            onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
+            currentUsername={currentUsername}
+          />
+        )}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+      />
+      <SharedSidebar extraTopOffset={10} />
+    </View>
   );
 }

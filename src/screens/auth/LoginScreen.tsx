@@ -11,10 +11,8 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
-import DebugConnectivity from '../../components/DebugConnectivity';
 import { useAuth } from '../../context/AuthContext';
 
 const C = {
@@ -45,7 +43,6 @@ export default function LoginScreen({ navigation }: Props) {
   const [errorMessage, setErrorMessage] = useState('');
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
-  const [debugOpen, setDebugOpen] = useState(false);
 
   const usernameError = usernameTouched && !username;
   const passwordError = passwordTouched && !password;
@@ -59,8 +56,8 @@ export default function LoginScreen({ navigation }: Props) {
     setErrorMessage('');
     try {
       await login({ username, password });
-    } catch {
-      setErrorMessage('Username o password non validi. Riprova.');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Errore di accesso. Riprova.');
     } finally {
       setLoading(false);
     }
@@ -169,26 +166,6 @@ export default function LoginScreen({ navigation }: Props) {
 
         </View>
 
-        {/* Debug panel */}
-        <View style={styles.debugSection}>
-          <TouchableOpacity
-            style={styles.debugToggle}
-            onPress={() => setDebugOpen(v => !v)}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons name="wifi-alert" size={14} color={C.textSoft} />
-            <Text style={styles.debugToggleText}>
-              {debugOpen ? 'Nascondi debug rete' : 'Debug rete (ERR_NETWORK)'}
-            </Text>
-            <MaterialCommunityIcons
-              name={debugOpen ? 'chevron-up' : 'chevron-down'}
-              size={16}
-              color={C.textSoft}
-            />
-          </TouchableOpacity>
-          {debugOpen && <DebugConnectivity />}
-        </View>
-
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -227,15 +204,15 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 28,
   },
-  logo: { width: 36, height: 36 },
-  brandName: { fontWeight: '800', fontSize: 20, letterSpacing: -0.4, color: C.brand700 },
+  logo: { width: 90, height: 90 },
+  brandName: { fontWeight: '800', fontSize: 28, letterSpacing: -0.4, color: C.primary },
 
   title: {
     fontWeight: '800',
     fontSize: 26,
     letterSpacing: -0.5,
     textAlign: 'center',
-    color: C.text,
+    color: '#000000',
     marginBottom: 6,
   },
   subtitle: {
@@ -268,7 +245,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 6,
   },
-  forgotLink: { fontSize: 12, fontWeight: '600', color: C.primaryDark },
+  forgotLink: { fontSize: 12, fontWeight: '600', color: C.primary },
 
   submitBtn: {
     flexDirection: 'row',
@@ -306,15 +283,5 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   dividerText: { fontSize: 13, fontWeight: '500', color: C.textSoft },
-  dividerLink: { fontSize: 13, fontWeight: '700', color: C.primaryDark },
-
-  debugSection: { width: '100%', maxWidth: 440, marginTop: 16, gap: 8 },
-  debugToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-  },
-  debugToggleText: { fontSize: 12, color: C.textSoft, fontWeight: '500' },
+  dividerLink: { fontSize: 13, fontWeight: '700', color: C.primary },
 });

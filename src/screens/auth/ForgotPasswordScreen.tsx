@@ -209,5 +209,5 @@ const styles = StyleSheet.create({
   btnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
   backLink: { alignItems: 'center', paddingTop: 4 },
-  backLinkText: { fontSize: 13, fontWeight: '600', color: C.primaryDark },
+  backLinkText: { fontSize: 13, fontWeight: '600', color: C.primary },
 });

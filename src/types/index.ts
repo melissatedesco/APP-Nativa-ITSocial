@@ -217,8 +217,8 @@ export type AuthStackParamList = {
 };
 
 export type MainTabParamList = {
+  Dashboard: undefined;
   Home: undefined;
-  MyClass: undefined;
   Notifications: undefined;
   Profile: undefined;
 };
@@ -230,4 +230,6 @@ export type MainStackParamList = {
   Chat: { username: string };
   SavedPosts: undefined;
   Messages: undefined;
+  MyClass: undefined;
+  SmartinaChat: undefined;
 };

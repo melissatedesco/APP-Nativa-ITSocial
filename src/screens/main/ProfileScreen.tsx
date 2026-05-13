@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   StyleSheet,
   Switch,
@@ -21,6 +22,7 @@ import { useTheme, ThemeColors, getRuoloBadge } from '../../context/ThemeContext
 import { userService } from '../../services/userService';
 import { MEDIA_BASE_URL } from '../../services/api';
 import { ProfiloDto, Post, MainStackParamList } from '../../types';
+import { SharedSidebar } from '../../components/SharedSidebar';
 
 const BANNER_GRADIENT: [string, string, string] = ['#00bcd4', '#0097a7', '#006064'];
 const AVATAR_SIZE = 108;
@@ -89,6 +91,8 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
 
   bannerContainer: { position: 'relative' },
   banner: { height: BANNER_H },
+  smartinaProfileBtn: { position: 'absolute', top: 12, right: 12, width: 44, height: 44, borderRadius: 22, overflow: 'hidden', borderWidth: 2, borderColor: '#4A8FD4', zIndex: 10 },
+  smartinaProfileImg: { width: 44, height: 44 },
   bannerOrb: {
     position: 'absolute',
     width: 220,
@@ -301,6 +305,7 @@ export default function ProfileScreen() {
   const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
 
   return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
     <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
 
       {/* Banner + Avatar */}
@@ -317,6 +322,14 @@ export default function ProfileScreen() {
             </LinearGradient>
           )}
         </View>
+        {/* SmarTina – tap per aprire la chat */}
+        <TouchableOpacity
+          style={styles.smartinaProfileBtn}
+          onPress={() => navigation.navigate('SmartinaChat')}
+          activeOpacity={0.85}
+        >
+          <Image source={require('../../../assets/smartina.png')} style={styles.smartinaProfileImg} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
@@ -433,5 +446,7 @@ export default function ProfileScreen() {
 
       </View>
     </ScrollView>
+    <SharedSidebar extraTopOffset={10} />
+    </View>
   );
 }

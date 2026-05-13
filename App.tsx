@@ -16,13 +16,13 @@ function ThemedApp() {
     ...(isDark ? MD3DarkTheme : MD3LightTheme),
     colors: {
       ...(isDark ? MD3DarkTheme : MD3LightTheme).colors,
-      primary: '#00bcd4',
-      secondary: '#0097a7',
-      background: isDark ? '#0b141e' : '#F8FAFC',
+      primary: '#4A8FD4',
+      secondary: '#3a7fc4',
+      background: isDark ? '#0D1B2E' : '#F1F5F9',
       surface: isDark ? '#16222e' : '#ffffff',
       error: '#ef4444',
       onPrimary: '#ffffff',
-      onSurface: isDark ? '#ffffff' : '#1A2433',
+      onSurface: isDark ? '#ffffff' : '#1E293B',
     },
   };
 

@@ -4,13 +4,15 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { MainTabParamList, MainStackParamList } from '../types';
+import DashboardScreen from '../screens/main/DashboardScreen';
 import HomeScreen from '../screens/main/HomeScreen';
-import MyClassScreen from '../screens/main/MyClassScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
 import MessaggiScreen from '../screens/main/MessaggiScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
 import SavedPostsScreen from '../screens/main/SavedPostsScreen';
+import MyClassScreen from '../screens/main/MyClassScreen';
+import SmartinaChatScreen from '../screens/main/SmartinaChatScreen';
 import { notificaService } from '../services/notificaService';
 import { useTheme } from '../context/ThemeContext';
 
@@ -68,24 +70,28 @@ function MainTabs() {
       }}
     >
       <Tab.Screen
-        name="Home"
-        component={HomeScreen}
+        name="Dashboard"
+        component={DashboardScreen}
         options={{
-          title: 'Feed',
-          tabBarLabel: 'Home',
+          headerShown: false,
+          tabBarLabel: 'Bacheca',
           tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'home' : 'home-outline'} size={25} color={color} />
+            <MaterialCommunityIcons
+              name={focused ? 'view-dashboard' : 'view-dashboard-outline'}
+              size={25}
+              color={color}
+            />
           ),
         }}
       />
       <Tab.Screen
-        name="MyClass"
-        component={MyClassScreen}
+        name="Home"
+        component={HomeScreen}
         options={{
-          title: 'La mia Classe',
-          tabBarLabel: 'Classe',
+          title: 'Feed',
+          tabBarLabel: 'Feed',
           tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'account-group' : 'account-group-outline'} size={25} color={color} />
+            <MaterialCommunityIcons name={focused ? 'home' : 'home-outline'} size={25} color={color} />
           ),
         }}
       />
@@ -107,7 +113,11 @@ function MainTabs() {
           title: 'Profilo',
           tabBarLabel: 'Profilo',
           tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'account-circle' : 'account-circle-outline'} size={25} color={color} />
+            <MaterialCommunityIcons
+              name={focused ? 'account-circle' : 'account-circle-outline'}
+              size={25}
+              color={color}
+            />
           ),
         }}
       />
@@ -131,6 +141,12 @@ export default function MainNavigator() {
       <Stack.Screen name="Messages" component={MessaggiScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Chat" component={MessaggiScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SavedPosts" component={SavedPostsScreen} options={{ title: 'Post salvati' }} />
+      <Stack.Screen name="MyClass" component={MyClassScreen} options={{ title: 'Le mie Classi' }} />
+      <Stack.Screen
+        name="SmartinaChat"
+        component={SmartinaChatScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }

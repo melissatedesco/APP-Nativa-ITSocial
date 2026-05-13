@@ -212,8 +212,8 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 28,
   },
-  logo: { width: 36, height: 36 },
-  brandName: { fontWeight: '800', fontSize: 20, letterSpacing: -0.4, color: C.brand700 },
+  logo: { width: 78, height: 78 },
+  brandName: { fontWeight: '800', fontSize: 26, letterSpacing: -0.4, color: C.primary },
 
   title: {
     fontWeight: '800',
@@ -283,5 +283,5 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   dividerText: { fontSize: 13, fontWeight: '500', color: C.textSoft },
-  dividerLink: { fontSize: 13, fontWeight: '700', color: C.primaryDark },
+  dividerLink: { fontSize: 13, fontWeight: '700', color: C.primary },
 });

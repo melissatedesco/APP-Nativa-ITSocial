@@ -203,5 +203,5 @@ const styles = StyleSheet.create({
   btnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
   linksRow: { alignItems: 'center', gap: 10 },
-  link: { fontSize: 12, fontWeight: '600', color: C.primaryDark, textAlign: 'center' },
+  link: { fontSize: 12, fontWeight: '600', color: C.primary, textAlign: 'center' },
 });
