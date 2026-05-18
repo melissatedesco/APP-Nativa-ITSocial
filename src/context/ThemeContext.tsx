@@ -19,40 +19,43 @@ export interface ThemeColors {
   saveBg: string;
 }
 
+// Light — token map: c-ink-50 → bg, bg-elev → card, c-ink-200 → border,
+// c-ink-900 → text, c-ink-500 → textSoft, c-ink-400 → textMuted,
+// c-brand-500 → primary, c-brand-600 → primaryDark, c-brand-700 → brand
 export const lightColors: ThemeColors = {
-  bg: '#F1F5F9',
-  card: '#ffffff',
-  border: '#E2E8F0',
-  text: '#1E293B',
-  textSoft: '#64748B',
-  textMuted: '#94A3B8',
-  primary: '#4A8FD4',
-  primaryDark: '#2D6BB5',
-  brand: '#2B5BA8',
-  warm: '#f59e0b',
-  warmBg: 'rgba(245,158,11,0.10)',
-  danger: '#ef4444',
-  dangerBg: '#FEF2F2',
-  inputBg: '#ffffff',
-  saveBg: 'rgba(74,143,212,0.10)',
+  bg:         '#f5f7fa',   // c-ink-50   oklch(98% .005 240)
+  card:       '#ffffff',   // bg-elev
+  border:     '#d8e1eb',   // c-ink-200  oklch(88% .010 250)
+  text:       '#1a2535',   // c-ink-900  oklch(22% .060 250)
+  textSoft:   '#617585',   // c-ink-500  oklch(52% .030 250)
+  textMuted:  '#8c9eb0',   // c-ink-400  oklch(65% .020 250)
+  primary:    '#4A8FD4',   // c-brand-500 oklch(60% .12 220)
+  primaryDark:'#3d7fc0',   // c-brand-600 oklch(52% .12 220)
+  brand:      '#2B5BA8',   // c-brand-700 oklch(44% .11 225)
+  warm:        '#f59e0b',
+  warmBg:      'rgba(245,158,11,0.10)',
+  danger:      '#ef4444',
+  dangerBg:    '#FEF2F2',
+  inputBg:    '#ffffff',
+  saveBg:      'rgba(74,143,212,0.10)',
 };
 
 export const darkColors: ThemeColors = {
-  bg: '#0D1B2E',
-  card: '#16222e',
-  border: '#1e3448',
-  text: '#ffffff',
-  textSoft: '#94a3b8',
-  textMuted: '#4a6580',
-  primary: '#4A8FD4',
-  primaryDark: '#3a7fc4',
-  brand: '#2B5BA8',
-  warm: '#f59e0b',
-  warmBg: 'rgba(245,158,11,0.15)',
-  danger: '#ef4444',
-  dangerBg: 'rgba(239,68,68,0.15)',
-  inputBg: '#0d1b27',
-  saveBg: 'rgba(74,143,212,0.12)',
+  bg:         '#2e4460',
+  card:       '#3a5478',
+  border:     '#4d6d8d',
+  text:       '#e4ecf7',
+  textSoft:   '#a0bdd4',
+  textMuted:  '#6e8fa8',
+  primary:    '#5b9fd4',
+  primaryDark:'#4A8FD4',
+  brand:      '#2B5BA8',
+  warm:        '#f59e0b',
+  warmBg:      'rgba(245,158,11,0.15)',
+  danger:      '#ef4444',
+  dangerBg:    'rgba(239,68,68,0.15)',
+  inputBg:    '#2a3f58',
+  saveBg:      'rgba(91,159,212,0.14)',
 };
 
 export function getRuoloBadge(ruolo?: string) {

@@ -20,7 +20,7 @@ import { useTheme, ThemeColors } from '../../context/ThemeContext';
 
 const AVATAR_SIZE = 96;
 
-const makeStyles = (C: ThemeColors) => StyleSheet.create({
+const makeStyles = (C: ThemeColors, isDark: boolean) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
   scrollContent: {
     paddingVertical: 32,
@@ -96,12 +96,12 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     padding: 12,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: isDark ? 'rgba(74,222,128,0.12)' : '#D1FAE5',
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: isDark ? 'rgba(74,222,128,0.30)' : '#A7F3D0',
     borderRadius: 12,
   },
-  alertSuccessText: { fontSize: 13, color: '#065F46', fontWeight: '600' },
+  alertSuccessText: { fontSize: 13, color: isDark ? '#4ade80' : '#065F46', fontWeight: '600' },
 
   saveBtn: {
     flexDirection: 'row',
@@ -131,8 +131,8 @@ export default function EditProfileScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { profile, loadProfile, updateProfile } = useProfile();
-  const { colors: C } = useTheme();
-  const styles = makeStyles(C);
+  const { colors: C, isDark } = useTheme();
+  const styles = makeStyles(C, isDark);
 
   const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
 
