@@ -44,8 +44,6 @@ const WELCOME: Message = {
   timestamp: new Date(),
 };
 
-// ── Fixed header colors (always dark — identico agli screenshot) ──────────────
-const HEADER_BG      = '#0F172A';
 const ONLINE_DOT     = '#22C55E';
 const VERIFIED_COLOR = '#3B82F6';
 
@@ -93,11 +91,12 @@ function TypingDots({ color }: { color: string }) {
 const makeStyles = (C: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
 
-  // Header (sempre scuro)
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: HEADER_BG,
+    backgroundColor: C.card,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
@@ -113,7 +112,7 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     borderRadius: 6,
     backgroundColor: ONLINE_DOT,
     borderWidth: 2,
-    borderColor: HEADER_BG,
+    borderColor: C.card,
   },
   headerInfo: { flex: 1 },
   headerName: {
@@ -121,13 +120,15 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     gap: 5,
   },
-  headerNameText: { fontSize: 15, fontWeight: '800', color: '#fff' },
-  headerStatus: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 1 },
+  headerNameText: { fontSize: 15, fontWeight: '800', color: C.text },
+  headerStatus: { fontSize: 12, color: C.textSoft, marginTop: 1 },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: C.inputBg,
+    borderWidth: 1,
+    borderColor: C.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -299,7 +300,7 @@ export default function SmartinaChatScreen() {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <MaterialCommunityIcons name="close" size={18} color="#fff" />
+          <MaterialCommunityIcons name="close" size={18} color={C.textSoft} />
         </TouchableOpacity>
       </View>
 

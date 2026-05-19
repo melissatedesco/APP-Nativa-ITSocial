@@ -11,24 +11,11 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-
-const C = {
-  bg: '#F1F5F9',
-  card: '#FFFFFF',
-  border: '#E2E8F0',
-  text: '#1E293B',
-  textSoft: '#64748B',
-  textMuted: '#94A3B8',
-  primary: '#4A8FD4',
-  primaryDark: '#2D6BB5',
-  brand700: '#2B5BA8',
-  danger: '#E53E3E',
-  dangerBg: '#FEF2F2',
-  dangerBorder: '#FECACA',
-} as const;
+import { useTheme, ThemeColors } from '../../context/ThemeContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
@@ -48,12 +35,152 @@ const FIELDS: {
   { key: 'password', label: 'Password (min 8 caratteri)', secure: true, autoCapitalize: 'none' },
 ];
 
+const makeStyles = (C: ThemeColors, isDark: boolean) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: C.bg },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 20,
+  },
+
+  card: {
+    width: '100%',
+    maxWidth: 440,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 28,
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: isDark ? 0.4 : 0.10,
+    shadowRadius: 32,
+    elevation: 8,
+  },
+
+  brandRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    columnGap: 12,
+    marginBottom: 28,
+  },
+  logo: { width: 82, height: 82 },
+  brandName: { fontWeight: '800', fontSize: 22, letterSpacing: -0.4, color: C.primary },
+
+  title: {
+    fontWeight: '800',
+    fontSize: 26,
+    letterSpacing: -0.5,
+    textAlign: 'center',
+    color: C.text,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: C.textSoft,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+
+  field: { marginBottom: 16 },
+  label: { fontWeight: '600', fontSize: 13, color: C.text, marginBottom: 6 },
+  input: {
+    width: '100%',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    backgroundColor: C.inputBg,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    borderRadius: 28,
+    fontSize: 14,
+    color: C.text,
+  },
+  inputError: { borderColor: C.danger },
+  fieldError: { marginTop: 5, fontSize: 12, fontWeight: '500', color: C.danger },
+
+  pwRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: C.border,
+    borderRadius: 28,
+    backgroundColor: C.inputBg,
+    overflow: 'hidden',
+  },
+  pwRowError: { borderColor: C.danger },
+  pwInnerInput: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: C.text,
+  },
+  pwEyeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    paddingVertical: 13,
+    marginTop: 4,
+    backgroundColor: C.primary,
+    borderRadius: 9999,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.30,
+    shadowRadius: 18,
+    elevation: 5,
+  },
+  submitDisabled: { opacity: 0.55 },
+  submitText: { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: -0.1 },
+
+  alertError: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: C.dangerBg,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(239,68,68,0.35)' : '#FECACA',
+    borderRadius: 14,
+  },
+  alertErrorText: { fontSize: 13, fontWeight: '500', color: C.danger },
+
+  divider: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  dividerText: { fontSize: 13, fontWeight: '500', color: C.textSoft },
+  dividerLink: { fontSize: 13, fontWeight: '700', color: C.primary },
+
+  backRow: { width: '100%', maxWidth: 440, paddingBottom: 8 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 4, alignSelf: 'flex-start' },
+  backBtnText: { fontSize: 14, fontWeight: '600', color: C.textSoft },
+});
+
 export default function RegisterScreen({ navigation }: Props) {
   const { register } = useAuth();
+  const { colors: C, isDark } = useTheme();
+  const styles = makeStyles(C, isDark);
+
   const [form, setForm] = useState({ nome: '', cognome: '', username: '', email: '', password: '' });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   function updateField(key: keyof typeof form) {
     return (value: string) => {
@@ -104,9 +231,15 @@ export default function RegisterScreen({ navigation }: Props) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.backRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Welcome')} activeOpacity={0.7}>
+            <MaterialCommunityIcons name="arrow-left" size={20} color={C.textSoft} />
+            <Text style={styles.backBtnText}>Indietro</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.card}>
 
-          {/* Brand */}
           <View style={styles.brandRow}>
             <Image
               source={require('../../../assets/logo-itsocial.png')}
@@ -119,27 +252,59 @@ export default function RegisterScreen({ navigation }: Props) {
           <Text style={styles.title}>Crea account</Text>
           <Text style={styles.subtitle}>Unisciti alla community di ITSocial</Text>
 
-          {FIELDS.map(({ key, label, keyboard, secure, autoCapitalize }) => {
+          {FIELDS.map(({ key, label, keyboard, autoCapitalize }) => {
             const fieldError = getFieldError(key);
+            const isPasswordField = key === 'password';
+
             return (
               <View key={key} style={styles.field}>
                 <Text style={styles.label}>{label}</Text>
-                <TextInput
-                  style={[styles.input, fieldError ? styles.inputError : null]}
-                  placeholder={label}
-                  placeholderTextColor={C.textMuted}
-                  value={form[key]}
-                  onChangeText={updateField(key)}
-                  onBlur={() => touchField(key)}
-                  autoCapitalize={autoCapitalize ?? 'none'}
-                  keyboardType={keyboard ?? 'default'}
-                  secureTextEntry={secure ?? false}
-                  autoCorrect={false}
-                  returnKeyType="next"
-                />
-                {fieldError && (
-                  <Text style={styles.fieldError}>{fieldError}</Text>
+
+                {isPasswordField ? (
+                  <View style={[styles.pwRow, fieldError ? styles.pwRowError : null]}>
+                    <TextInput
+                      style={styles.pwInnerInput}
+                      placeholder={label}
+                      placeholderTextColor={C.textMuted}
+                      value={form[key]}
+                      onChangeText={updateField(key)}
+                      onBlur={() => touchField(key)}
+                      autoCapitalize={autoCapitalize ?? 'none'}
+                      secureTextEntry={!showPassword}
+                      textContentType="none"
+                      autoComplete="off"
+                      autoCorrect={false}
+                      returnKeyType="done"
+                      onSubmitEditing={handleRegister}
+                    />
+                    <TouchableOpacity
+                      style={styles.pwEyeBtn}
+                      onPress={() => setShowPassword(prev => !prev)}
+                      activeOpacity={0.75}
+                    >
+                      <MaterialCommunityIcons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={20}
+                        color={showPassword ? C.primary : C.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TextInput
+                    style={[styles.input, fieldError ? styles.inputError : null]}
+                    placeholder={label}
+                    placeholderTextColor={C.textMuted}
+                    value={form[key]}
+                    onChangeText={updateField(key)}
+                    onBlur={() => touchField(key)}
+                    autoCapitalize={autoCapitalize ?? 'none'}
+                    keyboardType={keyboard ?? 'default'}
+                    autoCorrect={false}
+                    returnKeyType="next"
+                  />
                 )}
+
+                {fieldError && <Text style={styles.fieldError}>{fieldError}</Text>}
               </View>
             );
           })}
@@ -178,110 +343,3 @@ export default function RegisterScreen({ navigation }: Props) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: C.bg },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 20,
-  },
-
-  card: {
-    width: '100%',
-    maxWidth: 440,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 28,
-    paddingHorizontal: 32,
-    paddingVertical: 40,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.10,
-    shadowRadius: 32,
-    elevation: 8,
-  },
-
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 28,
-  },
-  logo: { width: 78, height: 78 },
-  brandName: { fontWeight: '800', fontSize: 26, letterSpacing: -0.4, color: C.primary },
-
-  title: {
-    fontWeight: '800',
-    fontSize: 26,
-    letterSpacing: -0.5,
-    textAlign: 'center',
-    color: C.text,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: C.textSoft,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 28,
-  },
-
-  field: { marginBottom: 16 },
-  label: { fontWeight: '600', fontSize: 13, color: C.text, marginBottom: 6 },
-  input: {
-    width: '100%',
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    backgroundColor: C.card,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    borderRadius: 14,
-    fontSize: 14,
-    color: C.text,
-  },
-  inputError: { borderColor: C.danger },
-  fieldError: { marginTop: 5, fontSize: 12, fontWeight: '500', color: C.danger },
-
-  submitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    width: '100%',
-    paddingVertical: 13,
-    marginTop: 4,
-    backgroundColor: C.primary,
-    borderRadius: 9999,
-    shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.30,
-    shadowRadius: 18,
-    elevation: 5,
-  },
-  submitDisabled: { opacity: 0.55 },
-  submitText: { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: -0.1 },
-
-  alertError: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: C.dangerBg,
-    borderWidth: 1,
-    borderColor: C.dangerBorder,
-    borderRadius: 14,
-  },
-  alertErrorText: { fontSize: 13, fontWeight: '500', color: C.danger },
-
-  divider: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  dividerText: { fontSize: 13, fontWeight: '500', color: C.textSoft },
-  dividerLink: { fontSize: 13, fontWeight: '700', color: C.primary },
-});
