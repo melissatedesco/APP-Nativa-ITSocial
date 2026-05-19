@@ -13,8 +13,18 @@ import EditProfileScreen from '../screens/main/EditProfileScreen';
 import SavedPostsScreen from '../screens/main/SavedPostsScreen';
 import MyClassScreen from '../screens/main/MyClassScreen';
 import SmartinaChatScreen from '../screens/main/SmartinaChatScreen';
+import AdminPanelScreen from '../screens/main/AdminPanelScreen';
+import UserListScreen from '../screens/main/UserListScreen';
+import PostListScreen from '../screens/main/PostListScreen';
+import AdminUtentiScreen from '../screens/admin/AdminUtentiScreen';
+import AdminRuoliScreen from '../screens/admin/AdminRuoliScreen';
+import AdminPermessiScreen from '../screens/admin/AdminPermessiScreen';
+import AdminIstitutiScreen from '../screens/admin/AdminIstitutiScreen';
+import AdminRuoloDetailScreen from '../screens/admin/AdminRuoloDetailScreen';
+import AdminDocentiScreen from '../screens/admin/AdminDocentiScreen';
 import { notificaService } from '../services/notificaService';
 import { useTheme } from '../context/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -24,7 +34,7 @@ type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 function BadgeIcon({ name, color, count }: { name: MCIName; color: string; count: number }) {
   return (
     <View style={iconStyles.wrap}>
-      <MaterialCommunityIcons name={name} size={25} color={color} />
+      <MaterialCommunityIcons name={name} size={28} color={color} />
       {count > 0 && (
         <View style={iconStyles.badge}>
           <Text style={iconStyles.badgeText}>{count > 99 ? '99+' : count}</Text>
@@ -48,21 +58,23 @@ function NotificationIcon({ color, focused }: { color: string; focused: boolean 
 
 function MainTabs() {
   const { colors: C, isDark } = useTheme();
+  const { bottom } = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
       screenOptions={{
         tabBarActiveTintColor: C.primary,
-        tabBarInactiveTintColor: isDark ? '#4a6580' : '#9ca3af',
+        tabBarInactiveTintColor: isDark ? '#8aa5bf' : '#6b7280',
         tabBarStyle: {
           backgroundColor: C.card,
           borderTopColor: C.border,
           borderTopWidth: 1,
-          height: 62,
-          paddingBottom: 10,
-          paddingTop: 6,
+          height: 64 + bottom,
+          paddingBottom: bottom + 10,
+          paddingTop: 10,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+        tabBarIconStyle: { marginBottom: 2 },
         headerShown: true,
         headerStyle: { backgroundColor: C.card },
         headerTitleStyle: { fontWeight: '700', color: C.text, fontSize: 17 },
@@ -78,7 +90,7 @@ function MainTabs() {
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons
               name={focused ? 'view-dashboard' : 'view-dashboard-outline'}
-              size={25}
+              size={28}
               color={color}
             />
           ),
@@ -88,10 +100,10 @@ function MainTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Feed',
-          tabBarLabel: 'Feed',
+          title: 'Home',
+          tabBarLabel: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons name={focused ? 'home' : 'home-outline'} size={25} color={color} />
+            <MaterialCommunityIcons name={focused ? 'home' : 'home-outline'} size={28} color={color} />
           ),
         }}
       />
@@ -115,7 +127,7 @@ function MainTabs() {
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons
               name={focused ? 'account-circle' : 'account-circle-outline'}
-              size={25}
+              size={28}
               color={color}
             />
           ),
@@ -147,6 +159,19 @@ export default function MainNavigator() {
         component={SmartinaChatScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen name="AdminPanel" component={AdminPanelScreen} options={{ title: 'Pannello Admin' }} />
+      <Stack.Screen name="UserList" component={UserListScreen} options={({ route }) => ({ title: (route.params as any).title })} />
+      <Stack.Screen name="PostList" component={PostListScreen} options={({ route }) => ({ title: (route.params as any).title })} />
+      <Stack.Screen name="AdminUtenti" component={AdminUtentiScreen} options={{ title: 'Gestisci Utenti' }} />
+      <Stack.Screen name="AdminRuoli" component={AdminRuoliScreen} options={{ title: 'Gestisci Ruoli' }} />
+      <Stack.Screen name="AdminPermessi" component={AdminPermessiScreen} options={{ title: 'Gestisci Permessi' }} />
+      <Stack.Screen name="AdminIstituti" component={AdminIstitutiScreen} options={{ title: 'Gestisci Istituti' }} />
+      <Stack.Screen
+        name="AdminRuoloDetail"
+        component={AdminRuoloDetailScreen}
+        options={({ route }) => ({ title: `Permessi — ${(route.params as any).ruoloNome}` })}
+      />
+      <Stack.Screen name="AdminDocenti" component={AdminDocentiScreen} options={{ title: 'Gestisci Docenti' }} />
     </Stack.Navigator>
   );
 }

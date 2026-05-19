@@ -72,7 +72,7 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 40,
+    minHeight: 80,
   },
   topBarCenter: {
     position: 'absolute',
@@ -83,7 +83,7 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
     gap: 7,
   },
-  brandLogo: { width: 26, height: 26 },
+  brandLogo: { width: 80, height: 80 },
   brandText: { fontSize: 17, fontWeight: '800', color: C.brand, letterSpacing: -0.3 },
   topAvatar: {
     width: 36,
@@ -110,6 +110,8 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
 
   // ─ Scroll
   scrollContent: { paddingBottom: 40 },
+  logoSection: { alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
+  logoImg: { width: 170, height: 170 },
 
   // ─ Section header
   section: { paddingHorizontal: 16, marginTop: 22 },
@@ -361,7 +363,6 @@ export default function DashboardScreen() {
               style={styles.brandLogo}
               resizeMode="contain"
             />
-            <Text style={styles.brandText}>ITSocial</Text>
           </View>
 
           {/* Campanella → Notifications */}

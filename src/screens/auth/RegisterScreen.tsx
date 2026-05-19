@@ -63,13 +63,11 @@ const makeStyles = (C: ThemeColors, isDark: boolean) => StyleSheet.create({
 
   brandRow: {
     width: '100%',
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    columnGap: 12,
     marginBottom: 28,
   },
-  logo: { width: 82, height: 82 },
+  logo: { width: 170, height: 170 },
   brandName: { fontWeight: '800', fontSize: 22, letterSpacing: -0.4, color: C.primary },
 
   title: {
@@ -246,7 +244,6 @@ export default function RegisterScreen({ navigation }: Props) {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.brandName}>ITSocial</Text>
           </View>
 
           <Text style={styles.title}>Crea account</Text>
