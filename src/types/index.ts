@@ -233,4 +233,13 @@ export type MainStackParamList = {
   Messages: undefined;
   MyClass: undefined;
   SmartinaChat: undefined;
+  AdminPanel: undefined;
+  UserList: { title: string; username: string; type: 'seguaci' | 'seguiti' };
+  PostList: { title: string; username: string; type: 'posts' | 'liked' };
+  AdminUtenti: undefined;
+  AdminRuoli: undefined;
+  AdminPermessi: undefined;
+  AdminIstituti: undefined;
+  AdminRuoloDetail: { ruoloId: number; ruoloNome: string };
+  AdminDocenti: undefined;
 };
