@@ -209,6 +209,7 @@ export type RootStackParamList = {
 };
 
 export type AuthStackParamList = {
+  Welcome: undefined;
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
@@ -217,8 +218,8 @@ export type AuthStackParamList = {
 };
 
 export type MainTabParamList = {
+  Dashboard: undefined;
   Home: undefined;
-  MyClass: undefined;
   Notifications: undefined;
   Profile: undefined;
 };
@@ -230,4 +231,15 @@ export type MainStackParamList = {
   Chat: { username: string };
   SavedPosts: undefined;
   Messages: undefined;
+  MyClass: undefined;
+  SmartinaChat: undefined;
+  AdminPanel: undefined;
+  UserList: { title: string; username: string; type: 'seguaci' | 'seguiti' };
+  PostList: { title: string; username: string; type: 'posts' | 'liked' };
+  AdminUtenti: undefined;
+  AdminRuoli: undefined;
+  AdminPermessi: undefined;
+  AdminIstituti: undefined;
+  AdminRuoloDetail: { ruoloId: number; ruoloNome: string };
+  AdminDocenti: undefined;
 };

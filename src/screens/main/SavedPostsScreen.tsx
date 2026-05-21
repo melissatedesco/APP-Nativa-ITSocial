@@ -16,21 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { MEDIA_BASE_URL } from '../../services/api';
 import { salvataggioService } from '../../services/salvataggioService';
 import { Post } from '../../types';
-
-const C = {
-  bg: '#F8FAFC',
-  card: '#ffffff',
-  border: '#E8F0F5',
-  text: '#1A2433',
-  textSoft: '#6b7280',
-  textMuted: '#9ca3af',
-  primary: '#00ACC1',
-  warm: '#f59e0b',
-  warmBg: '#fffbeb',
-  danger: '#dc2626',
-} as const;
-
-const AVATAR_GRADIENT: [string, string] = ['#67E8F9', '#00ACC1'];
+import { useTheme, ThemeColors } from '../../context/ThemeContext';
 
 function timeAgo(iso?: string): string {
   if (!iso) return '';
@@ -43,16 +29,113 @@ function timeAgo(iso?: string): string {
   return `${Math.floor(h / 24)}g`;
 }
 
-function getRuoloColor(ruolo?: string): string {
-  if (!ruolo) return C.textMuted;
+function getRuoloColor(ruolo?: string, C?: ThemeColors): string {
+  if (!ruolo) return C?.textMuted ?? '#94A3B8';
   const r = ruolo.toUpperCase();
   if (r.includes('PROFESSORE')) return '#1E40AF';
   if (r.includes('STUDENTE'))   return '#065F46';
   if (r.includes('ADMIN'))      return '#92400E';
-  return C.textMuted;
+  return C?.textMuted ?? '#94A3B8';
 }
 
+const makeStyles = (C: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: C.bg },
+  listContent: { padding: 16, paddingBottom: 40 },
+
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 32 },
+  errorTitle: { fontSize: 16, fontWeight: '700', color: C.text, textAlign: 'center' },
+  errorText: { fontSize: 13, color: C.textSoft, textAlign: 'center' },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: C.primary,
+    borderRadius: 999,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  retryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  postCard: {
+    backgroundColor: C.card,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: C.border,
+    overflow: 'hidden',
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    paddingBottom: 10,
+    gap: 10,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  headerInfo: { flex: 1, gap: 2 },
+  authorName: { fontSize: 14, fontWeight: '700', color: C.text },
+  authorMeta: { fontSize: 11, color: C.textMuted },
+  unsaveBtn: { padding: 4 },
+
+  content: {
+    fontSize: 14,
+    color: C.text,
+    lineHeight: 21,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+  },
+
+  imagePreview: {
+    marginHorizontal: 14,
+    marginBottom: 10,
+    height: 180,
+    borderRadius: 10,
+    backgroundColor: C.border,
+  },
+
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  stat: { fontSize: 12, color: C.textSoft, fontWeight: '500' },
+  statDivider: { width: 1, height: 12, backgroundColor: C.border, marginHorizontal: 2 },
+
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 80,
+    gap: 10,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
+  emptySubtitle: { fontSize: 13, color: C.textSoft, textAlign: 'center', paddingHorizontal: 32 },
+});
+
 function SavedPostCard({ post, onUnsave }: { post: Post; onUnsave: (id: number) => void }) {
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
+  const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
   const initials = (post.nomeUtente ?? '?')[0].toUpperCase();
   const images = post.allegati?.filter(a => a.tipo === 'IMAGE') ?? [];
 
@@ -65,7 +148,6 @@ function SavedPostCard({ post, onUnsave }: { post: Post; onUnsave: (id: number) 
 
   return (
     <View style={styles.postCard}>
-      {/* Header */}
       <View style={styles.cardHeader}>
         <LinearGradient colors={AVATAR_GRADIENT} style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
@@ -73,7 +155,7 @@ function SavedPostCard({ post, onUnsave }: { post: Post; onUnsave: (id: number) 
         <View style={styles.headerInfo}>
           <Text style={styles.authorName} numberOfLines={1}>{post.nomeUtente ?? 'Utente'}</Text>
           <Text style={styles.authorMeta}>
-            <Text style={{ color: getRuoloColor(post.ruoloUtente) }}>
+            <Text style={{ color: getRuoloColor(post.ruoloUtente, C) }}>
               {post.ruoloUtente ? `${post.ruoloUtente}  ·  ` : ''}
             </Text>
             @{post.usernameUtente}{'  ·  '}{timeAgo(post.dataOra)}
@@ -88,10 +170,8 @@ function SavedPostCard({ post, onUnsave }: { post: Post; onUnsave: (id: number) 
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
       <Text style={styles.content} numberOfLines={6}>{post.contenuto}</Text>
 
-      {/* Image preview */}
       {images.length > 0 && (
         <ExpoImage
           source={{ uri: MEDIA_BASE_URL + images[0].url }}
@@ -100,7 +180,6 @@ function SavedPostCard({ post, onUnsave }: { post: Post; onUnsave: (id: number) 
         />
       )}
 
-      {/* Footer stats */}
       <View style={styles.cardFooter}>
         <MaterialCommunityIcons name="star" size={14} color={C.warm} />
         <Text style={styles.stat}>{post.numeroLike ?? 0}</Text>
@@ -120,6 +199,8 @@ function SavedPostCard({ post, onUnsave }: { post: Post; onUnsave: (id: number) 
 }
 
 export default function SavedPostsScreen() {
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -206,97 +287,3 @@ export default function SavedPostsScreen() {
     />
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: C.bg },
-  listContent: { padding: 16, paddingBottom: 40 },
-
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 32 },
-  errorTitle: { fontSize: 16, fontWeight: '700', color: C.text, textAlign: 'center' },
-  errorText: { fontSize: 13, color: C.textSoft, textAlign: 'center' },
-  retryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    backgroundColor: C.primary,
-    borderRadius: 999,
-    shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  retryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-
-  postCard: {
-    backgroundColor: C.card,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: C.border,
-    overflow: 'hidden',
-    shadowColor: '#1A2433',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    paddingBottom: 10,
-    gap: 10,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: { color: '#fff', fontSize: 14, fontWeight: '800' },
-  headerInfo: { flex: 1, gap: 2 },
-  authorName: { fontSize: 14, fontWeight: '700', color: C.text },
-  authorMeta: { fontSize: 11, color: C.textMuted },
-  unsaveBtn: { padding: 4 },
-
-  content: {
-    fontSize: 14,
-    color: C.text,
-    lineHeight: 21,
-    paddingHorizontal: 14,
-    paddingBottom: 10,
-  },
-
-  imagePreview: {
-    marginHorizontal: 14,
-    marginBottom: 10,
-    height: 180,
-    borderRadius: 10,
-    backgroundColor: C.border,
-  },
-
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  stat: { fontSize: 12, color: C.textSoft, fontWeight: '500' },
-  statDivider: { width: 1, height: 12, backgroundColor: C.border, marginHorizontal: 2 },
-
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 80,
-    gap: 10,
-  },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
-  emptySubtitle: { fontSize: 13, color: C.textSoft, textAlign: 'center', paddingHorizontal: 32 },
-});

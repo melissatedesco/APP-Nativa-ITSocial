@@ -18,22 +18,7 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useAuth } from '../../context/AuthContext';
 import { messaggiService } from '../../services/messaggiService';
 import { ConversazioneDto, MessaggioDto } from '../../types';
-
-const C = {
-  bg: '#F8FAFC',
-  card: '#ffffff',
-  border: '#E8F0F5',
-  text: '#1A2433',
-  textSoft: '#6b7280',
-  textMuted: '#9ca3af',
-  primary: '#00ACC1',
-  primaryDark: '#0097A7',
-  danger: '#dc2626',
-  msgOut: '#00ACC1',
-  msgIn: '#F8FAFC',
-} as const;
-
-const AVATAR_GRADIENT: [string, string] = ['#67E8F9', '#00ACC1'];
+import { useTheme, ThemeColors } from '../../context/ThemeContext';
 
 type ScreenView = 'list' | 'chat';
 
@@ -55,6 +40,155 @@ function formatChatTime(iso?: string): string {
   return new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
+const makeStyles = (C: ThemeColors) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: C.bg },
+
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+
+  listContent: { padding: 16, paddingBottom: 32 },
+
+  convCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 14,
+    gap: 12,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  convCardUnread: {
+    borderColor: C.primary + '40',
+    backgroundColor: C.saveBg,
+  },
+  convAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  convAvatarText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  convBody: { flex: 1, gap: 2 },
+  convNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  convName: { fontSize: 15, fontWeight: '600', color: C.text },
+  convNameUnread: { fontWeight: '800' },
+  convTime: { fontSize: 11, color: C.textMuted },
+  convHandle: { fontSize: 12, color: C.textSoft },
+  convLastMsg: { fontSize: 13, color: C.textMuted, marginTop: 2 },
+  convLastMsgUnread: { color: C.text, fontWeight: '600' },
+  unreadBadge: {
+    backgroundColor: C.primary,
+    borderRadius: 999,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+
+  emptyState: { alignItems: 'center', paddingVertical: 80, gap: 10 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
+  emptySubtitle: { fontSize: 13, color: C.textSoft, textAlign: 'center', paddingHorizontal: 32 },
+
+  chatContainer: { flex: 1, backgroundColor: C.bg },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    gap: 12,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  backBtn: { padding: 4 },
+  chatAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chatAvatarText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  chatName: { fontSize: 15, fontWeight: '700', color: C.text },
+  chatHandle: { fontSize: 12, color: C.textSoft },
+
+  msgListContent: { padding: 16, paddingBottom: 8, gap: 6 },
+  msgRow: { flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 4 },
+  msgRowOut: { justifyContent: 'flex-end' },
+  msgBubble: {
+    maxWidth: '75%',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    gap: 2,
+  },
+  msgBubbleIn: {
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderBottomLeftRadius: 4,
+  },
+  msgBubbleOut: {
+    backgroundColor: C.primary,
+    borderBottomRightRadius: 4,
+  },
+  msgSender: { fontSize: 11, fontWeight: '700', color: C.primary, marginBottom: 2 },
+  msgText: { fontSize: 14, color: C.text, lineHeight: 20 },
+  msgTextOut: { color: '#fff' },
+  msgTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' },
+  msgTime: { fontSize: 10, color: C.textMuted },
+  msgTimeOut: { color: 'rgba(255,255,255,0.7)' },
+
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  msgInput: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: C.bg,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: C.border,
+    fontSize: 14,
+    color: C.text,
+  },
+  sendBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: C.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sendBtnDisabled: { opacity: 0.4 },
+});
+
 // ─── Conversation List ────────────────────────────────────────────────────────
 function ConversationList({
   conversations,
@@ -69,6 +203,10 @@ function ConversationList({
   onRefresh: () => void;
   onOpen: (conv: ConversazioneDto) => void;
 }) {
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
+  const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -145,6 +283,10 @@ function ChatView({
   currentUsername: string;
   onBack: () => void;
 }) {
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
+  const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
+
   const [messages, setMessages] = useState<MessaggioDto[]>(conversation.messaggi ?? []);
   const [loading, setLoading] = useState(conversation.messaggi === undefined);
   const [newText, setNewText] = useState('');
@@ -197,7 +339,6 @@ function ChatView({
 
   return (
     <View style={styles.chatContainer}>
-      {/* Chat header */}
       <View style={styles.chatHeader}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={C.primary} />
@@ -211,7 +352,6 @@ function ChatView({
         </View>
       </View>
 
-      {/* Messages */}
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={C.primary} />
@@ -250,8 +390,7 @@ function ChatView({
         />
       )}
 
-      {/* Input */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.inputRow}>
           <TextInput
             style={styles.msgInput}
@@ -282,6 +421,8 @@ function ChatView({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function MessaggiScreen() {
+  const { colors: C } = useTheme();
+  const styles = makeStyles(C);
   const { user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
@@ -357,153 +498,3 @@ export default function MessaggiScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: C.bg },
-
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-
-  listContent: { padding: 16, paddingBottom: 32 },
-
-  convCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.card,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 14,
-    gap: 12,
-    shadowColor: '#1A2433',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  convCardUnread: {
-    borderColor: C.primary + '40',
-    backgroundColor: '#E0F7FA',
-  },
-  convAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  convAvatarText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  convBody: { flex: 1, gap: 2 },
-  convNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  convName: { fontSize: 15, fontWeight: '600', color: C.text },
-  convNameUnread: { fontWeight: '800' },
-  convTime: { fontSize: 11, color: C.textMuted },
-  convHandle: { fontSize: 12, color: C.textSoft },
-  convLastMsg: { fontSize: 13, color: C.textMuted, marginTop: 2 },
-  convLastMsgUnread: { color: C.text, fontWeight: '600' },
-  unreadBadge: {
-    backgroundColor: C.primary,
-    borderRadius: 999,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-  },
-  unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-
-  emptyState: { alignItems: 'center', paddingVertical: 80, gap: 10 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
-  emptySubtitle: { fontSize: 13, color: C.textSoft, textAlign: 'center', paddingHorizontal: 32 },
-
-  // Chat
-  chatContainer: { flex: 1, backgroundColor: C.bg },
-  chatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.card,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    gap: 12,
-    shadowColor: '#1A2433',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  backBtn: { padding: 4 },
-  chatAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chatAvatarText: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  chatName: { fontSize: 15, fontWeight: '700', color: C.text },
-  chatHandle: { fontSize: 12, color: C.textSoft },
-
-  msgListContent: { padding: 16, paddingBottom: 8, gap: 6 },
-  msgRow: { flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 4 },
-  msgRowOut: { justifyContent: 'flex-end' },
-  msgBubble: {
-    maxWidth: '75%',
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    gap: 2,
-  },
-  msgBubbleIn: {
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderBottomLeftRadius: 4,
-  },
-  msgBubbleOut: {
-    backgroundColor: C.msgOut,
-    borderBottomRightRadius: 4,
-  },
-  msgSender: { fontSize: 11, fontWeight: '700', color: C.primary, marginBottom: 2 },
-  msgText: { fontSize: 14, color: C.text, lineHeight: 20 },
-  msgTextOut: { color: '#fff' },
-  msgTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' },
-  msgTime: { fontSize: 10, color: C.textMuted },
-  msgTimeOut: { color: 'rgba(255,255,255,0.7)' },
-
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.card,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  msgInput: {
-    flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    backgroundColor: C.bg,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: C.border,
-    fontSize: 14,
-    color: C.text,
-  },
-  sendBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: C.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  sendBtnDisabled: { opacity: 0.4 },
-});

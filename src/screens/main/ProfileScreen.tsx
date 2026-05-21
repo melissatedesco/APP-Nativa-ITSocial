@@ -10,6 +10,7 @@ import {
   Alert,
   useWindowDimensions,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import { useTheme, ThemeColors, getRuoloBadge } from '../../context/ThemeContext
 import { userService } from '../../services/userService';
 import { MEDIA_BASE_URL } from '../../services/api';
 import { ProfiloDto, Post, MainStackParamList } from '../../types';
+import { SharedSidebar } from '../../components/SharedSidebar';
 
 const BANNER_GRADIENT: [string, string, string] = ['#00bcd4', '#0097a7', '#006064'];
 const AVATAR_SIZE = 108;
@@ -32,12 +34,12 @@ function formatDate(iso?: string): string {
   return new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function StatCell({ value, label, styles }: { value: number; label: string; styles: any }) {
+function StatCell({ value, label, styles, onPress }: { value: number; label: string; styles: any; onPress?: () => void }) {
   return (
-    <View style={styles.statCell}>
+    <TouchableOpacity style={styles.statCell} onPress={onPress} activeOpacity={onPress ? 0.7 : 1} disabled={!onPress}>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -89,6 +91,8 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
 
   bannerContainer: { position: 'relative' },
   banner: { height: BANNER_H },
+  smartinaProfileBtn: { position: 'absolute', top: 12, right: 12, width: 44, height: 44, borderRadius: 22, overflow: 'hidden', borderWidth: 2, borderColor: '#4A8FD4', zIndex: 10 },
+  smartinaProfileImg: { width: 44, height: 44 },
   bannerOrb: {
     position: 'absolute',
     width: 220,
@@ -175,6 +179,24 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   memberText: { fontSize: 13, color: C.textSoft },
   memberDate: { fontWeight: '600', color: C.text },
 
+  adminCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.primary,
+    borderRadius: 15,
+    padding: 16,
+    gap: 14,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  adminIconWrap: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  adminText: { flex: 1 },
+  adminTitle: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  adminDesc: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+
   postsSection: { gap: 10 },
   postsSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   postsBadge: { backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 2 },
@@ -210,6 +232,7 @@ export default function ProfileScreen() {
   const [error, setError] = useState('');
   const [seguito, setSeguito] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   const profilo: ProfiloDto | null = isOwnProfile ? profile : otherProfilo;
   const isCurrentlyLoading = isOwnProfile ? profileLoading : loading;
@@ -229,6 +252,52 @@ export default function ProfileScreen() {
         .finally(() => setLoading(false));
     }
   }, [targetUsername, isOwnProfile]);
+
+  async function pickAndUploadPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permesso negato', "Abilita l'accesso alla galleria nelle impostazioni.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    setPhotoUploading(true);
+    try {
+      await userService.updateProfilePhoto(result.assets[0].uri);
+      await loadProfile(targetUsername);
+    } catch {
+      Alert.alert('Errore', 'Impossibile caricare la foto. Riprova.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  async function removePhoto() {
+    setPhotoUploading(true);
+    try {
+      await userService.updateProfile({ fotoProfilo: null } as any);
+      await loadProfile(targetUsername);
+    } catch {
+      Alert.alert('Errore', 'Impossibile rimuovere la foto. Riprova.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  function handleAvatarPress() {
+    if (!isOwnProfile) return;
+    const hasPhoto = !!profilo?.fotoProfilo;
+    Alert.alert('Foto profilo', undefined, [
+      { text: hasPhoto ? 'Modifica foto' : 'Aggiungi foto', onPress: pickAndUploadPhoto },
+      ...(hasPhoto ? [{ text: 'Rimuovi foto', style: 'destructive' as const, onPress: removePhoto }] : []),
+      { text: 'Annulla', style: 'cancel' as const },
+    ]);
+  }
 
   function handleLogout() {
     Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
@@ -301,6 +370,7 @@ export default function ProfileScreen() {
   const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
 
   return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
     <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
 
       {/* Banner + Avatar */}
@@ -308,15 +378,24 @@ export default function ProfileScreen() {
         <LinearGradient colors={BANNER_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.banner}>
           <View style={styles.bannerOrb} />
         </LinearGradient>
-        <View style={styles.avatarOuter}>
-          {profilo?.fotoProfilo ? (
+        <TouchableOpacity
+          style={styles.avatarOuter}
+          onPress={handleAvatarPress}
+          activeOpacity={isOwnProfile ? 0.75 : 1}
+          disabled={!isOwnProfile}
+        >
+          {photoUploading ? (
+            <View style={styles.avatarGradient}>
+              <ActivityIndicator size="large" color="#fff" />
+            </View>
+          ) : profilo?.fotoProfilo ? (
             <ExpoImage source={{ uri: profilo.fotoProfilo }} style={styles.avatarImg} contentFit="cover" />
           ) : (
             <LinearGradient colors={AVATAR_GRADIENT} style={styles.avatarGradient}>
               <Text style={styles.avatarLetter}>{avatarLetter}</Text>
             </LinearGradient>
           )}
-        </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
@@ -380,15 +459,27 @@ export default function ProfileScreen() {
         {/* Stats */}
         <View style={styles.statsCard}>
           <View style={styles.statsGrid}>
-            <StatCell value={profilo?.numPost ?? 0}    label="Post"    styles={styles} />
+            <StatCell
+              value={profilo?.numPost ?? 0} label="Post" styles={styles}
+              onPress={() => navigation.navigate('PostList', { title: 'Post', username, type: 'posts' })}
+            />
             <View style={styles.statDividerV} />
-            <StatCell value={profilo?.numLike ?? 0}    label="Like"    styles={styles} />
+            <StatCell
+              value={profilo?.numLike ?? 0} label="Like" styles={styles}
+              onPress={() => navigation.navigate('PostList', { title: 'Post piaciuti', username, type: 'liked' })}
+            />
           </View>
           <View style={styles.statDividerH} />
           <View style={styles.statsGrid}>
-            <StatCell value={profilo?.numSeguaci ?? 0} label="Seguaci" styles={styles} />
+            <StatCell
+              value={profilo?.numSeguaci ?? 0} label="Seguaci" styles={styles}
+              onPress={() => navigation.navigate('UserList', { title: 'Seguaci', username, type: 'seguaci' })}
+            />
             <View style={styles.statDividerV} />
-            <StatCell value={profilo?.numSeguiti ?? 0} label="Seguiti" styles={styles} />
+            <StatCell
+              value={profilo?.numSeguiti ?? 0} label="Seguiti" styles={styles}
+              onPress={() => navigation.navigate('UserList', { title: 'Seguiti', username, type: 'seguiti' })}
+            />
           </View>
         </View>
 
@@ -398,6 +489,24 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>Bio</Text>
             <Text style={styles.bioText}>{profilo.bio}</Text>
           </View>
+        )}
+
+        {/* Pannello Admin — visibile solo al ruolo ADMIN */}
+        {isOwnProfile && (profilo?.ruolo ?? user?.ruoli?.[0]?.nome)?.toUpperCase() === 'ADMIN' && (
+          <TouchableOpacity
+            style={styles.adminCard}
+            onPress={() => navigation.navigate('AdminPanel')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.adminIconWrap}>
+              <MaterialCommunityIcons name="shield-crown" size={22} color="#fff" />
+            </View>
+            <View style={styles.adminText}>
+              <Text style={styles.adminTitle}>Pannello Amministrazione</Text>
+              <Text style={styles.adminDesc}>Gestisci utenti, ruoli e permessi</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#fff" style={{ opacity: 0.7 }} />
+          </TouchableOpacity>
         )}
 
         {/* Membro dal */}
@@ -433,5 +542,7 @@ export default function ProfileScreen() {
 
       </View>
     </ScrollView>
+    <SharedSidebar extraTopOffset={10} />
+    </View>
   );
 }

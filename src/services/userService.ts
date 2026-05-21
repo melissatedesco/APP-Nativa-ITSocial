@@ -25,6 +25,26 @@ export const userService = {
     await api.delete(`/segui/${username}`);
   },
 
+  async getSeguaci(username: string): Promise<ProfiloDto[]> {
+    const { data } = await api.get<ProfiloDto[]>(`/segui/${username}/seguaci`);
+    return data;
+  },
+
+  async getSeguiti(username: string): Promise<ProfiloDto[]> {
+    const { data } = await api.get<ProfiloDto[]>(`/segui/${username}/seguiti`);
+    return data;
+  },
+
+  async getLikedPosts(username: string): Promise<any[]> {
+    const { data } = await api.get<any[]>(`/likes/utente/${username}`);
+    return data;
+  },
+
+  async getUserPosts(username: string): Promise<any[]> {
+    const { data } = await api.get<any[]>(`/post/utente/${username}`);
+    return data;
+  },
+
   async updateProfile(payload: UpdateProfileData): Promise<ProfiloDto> {
     const { data } = await api.put<ProfiloDto>('/utenti/my-profile', payload);
     return data;

@@ -99,16 +99,16 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: C.border,
     padding: 14,
     gap: 12,
-    shadowColor: '#191d2e',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 2,
   },
   notificaCardUnread: {
     borderColor: C.primary + '50',
@@ -211,10 +211,11 @@ export default function NotificationsScreen() {
       notificaService.segnaComeLetta(n.id).catch(() => {});
       setNotifiche(prev => prev.map(x => x.id === n.id ? { ...x, letta: true } : x));
     }
-    if (n.tipoRiferimento === 'UTENTE') {
-      navigation.navigate('UserProfile', { username: n.attoreUsername });
-    } else if (n.tipoRiferimento === 'CONVERSAZIONE') {
+    if (n.tipo === 'MESSAGGIO' || n.tipoRiferimento === 'CONVERSAZIONE') {
       navigation.navigate('Chat', { username: n.attoreUsername });
+    } else if (n.attoreUsername) {
+      // LIKE, COMMENTO, FOLLOW, ISCRIZIONE_* → profilo di chi ha agito
+      navigation.navigate('UserProfile', { username: n.attoreUsername });
     }
   }
 
