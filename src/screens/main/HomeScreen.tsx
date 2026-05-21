@@ -28,6 +28,7 @@ import { commentoService } from '../../services/commentoService';
 import { sondaggioService } from '../../services/sondaggioService';
 import { Post, CommentoDto, SondaggioDto, MainStackParamList } from '../../types';
 import { useFeed, FeedTab } from '../../hooks/useFeed';
+import ImageViewerModal from '../../components/ImageViewerModal';
 import { SharedSidebar } from '../../components/SharedSidebar';
 
 function timeAgo(iso?: string): string {
@@ -379,7 +380,7 @@ function PollSection({ initialSondaggio }: { initialSondaggio: SondaggioDto }) {
 }
 
 // ─── PostCard ─────────────────────────────────────────────────────────────────
-function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor, currentUsername }: {
+function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor, onPressDetail, currentUsername }: {
   post: Post;
   liked: boolean;
   saved: boolean;
@@ -387,15 +388,18 @@ function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor,
   onSave: (id: number) => void;
   onDelete: (id: number) => void;
   onPressAuthor: (username: string) => void;
+  onPressDetail: () => void;
   currentUsername: string;
 }) {
   const { colors: C } = useTheme();
   const styles = makeStyles(C);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const ruoloTag = getRuoloBadge(post.ruoloUtente);
-  const [showComments, setShowComments] = useState(false);
   const isOwn = post.usernameUtente === currentUsername;
   const images = post.allegati?.filter(a => a.tipo === 'IMAGE') ?? [];
+  const imageUris = images.map(a => MEDIA_BASE_URL + a.url);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex]     = useState(0);
 
   function handleLike() {
     Animated.sequence([
@@ -438,16 +442,28 @@ function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor,
 
       {images.length > 0 && (
         <View style={styles.imageContainer}>
-          {images.map(a => (
-            <ExpoImage
+          {images.map((a, i) => (
+            <TouchableOpacity
               key={a.id}
-              source={{ uri: MEDIA_BASE_URL + a.url }}
-              style={images.length === 1 ? styles.postImageSingle : styles.postImageGrid}
-              contentFit="cover"
-            />
+              activeOpacity={0.92}
+              onPress={() => { setViewerIndex(i); setViewerVisible(true); }}
+            >
+              <ExpoImage
+                source={{ uri: MEDIA_BASE_URL + a.url }}
+                style={images.length === 1 ? styles.postImageSingle : styles.postImageGrid}
+                contentFit="cover"
+              />
+            </TouchableOpacity>
           ))}
         </View>
       )}
+
+      <ImageViewerModal
+        images={imageUris}
+        initialIndex={viewerIndex}
+        visible={viewerVisible}
+        onClose={() => setViewerVisible(false)}
+      />
 
       {post.sondaggio && <PollSection initialSondaggio={post.sondaggio} />}
 
@@ -459,9 +475,9 @@ function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor,
           <Text style={[styles.actionCount, liked && styles.actionCountLiked]}>{post.numeroLike ?? 0}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionBtn, showComments && styles.actionBtnActive]} onPress={() => setShowComments(v => !v)} activeOpacity={0.7}>
-          <MaterialCommunityIcons name={showComments ? 'comment' : 'comment-outline'} size={19} color={showComments ? C.primary : C.textSoft} />
-          <Text style={[styles.actionCount, showComments && styles.actionCountActive]}>{post.numeroCommenti ?? post.commenti?.length ?? 0}</Text>
+        <TouchableOpacity style={styles.actionBtn} onPress={onPressDetail} activeOpacity={0.7}>
+          <MaterialCommunityIcons name="comment-outline" size={19} color={C.textSoft} />
+          <Text style={styles.actionCount}>{post.numeroCommenti ?? post.commenti?.length ?? 0}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.actionBtn, saved && styles.actionBtnSaved]} onPress={() => onSave(post.id)} activeOpacity={0.7}>
@@ -470,13 +486,6 @@ function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor,
         </TouchableOpacity>
       </View>
 
-      {showComments && (
-        <CommentsSection
-          postId={post.id}
-          initialComments={Array.isArray(post.commenti) ? post.commenti as CommentoDto[] : []}
-          currentUsername={currentUsername}
-        />
-      )}
     </View>
   );
 }
@@ -666,6 +675,7 @@ export default function HomeScreen() {
             onSave={toggleSave}
             onDelete={deletePost}
             onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
+            onPressDetail={() => navigation.navigate('PostDetail', { postId: item.id, initialLiked: likedIds.has(item.id), initialSaved: savedIds.has(item.id) })}
             currentUsername={currentUsername}
           />
         )}

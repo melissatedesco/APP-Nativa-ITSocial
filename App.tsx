@@ -7,6 +7,7 @@ import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-na
 import { AuthProvider } from './src/context/AuthContext';
 import { UserProvider } from './src/context/UserContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { NotifPrefsProvider } from './src/context/NotifPrefsContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 function ThemedApp() {
@@ -28,12 +29,14 @@ function ThemedApp() {
 
   return (
     <PaperProvider theme={paperTheme}>
-      <AuthProvider>
-        <UserProvider>
-          <StatusBar style={isDark ? 'light' : 'dark'} />
-          <AppNavigator />
-        </UserProvider>
-      </AuthProvider>
+      <NotifPrefsProvider>
+        <AuthProvider>
+          <UserProvider>
+            <StatusBar style={isDark ? 'light' : 'dark'} />
+            <AppNavigator />
+          </UserProvider>
+        </AuthProvider>
+      </NotifPrefsProvider>
     </PaperProvider>
   );
 }
