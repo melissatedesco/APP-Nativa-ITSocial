@@ -417,6 +417,9 @@ export default function ProfileScreen() {
               <TouchableOpacity style={styles.savedBtn} onPress={() => navigation.navigate('SavedPosts')}>
                 <Text style={styles.savedBtnText}>🔖 Salvati</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={styles.savedBtn} onPress={() => navigation.navigate('Settings')}>
+                <Text style={styles.savedBtnText}>⚙️ Impostazioni</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                 <Text style={styles.logoutBtnText}>Esci</Text>
               </TouchableOpacity>

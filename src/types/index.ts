@@ -178,6 +178,53 @@ export interface ConversazioneDto {
 }
 
 // ─── Classes ──────────────────────────────────────────────────────────────────
+export interface AnnuncioAllegatoDto {
+  nome: string;
+  url: string;
+  tipo: string;
+}
+
+export interface AnnuncioDto {
+  id: number;
+  classeId: number;
+  autoreUsername: string;
+  autoreNome: string;
+  titolo: string;
+  contenuto: string;
+  allegati: AnnuncioAllegatoDto[];
+  numeroCommenti: number;
+  createdAt: string;
+}
+
+export interface CommentoAnnuncioDto {
+  id: number;
+  annuncioId: number;
+  autoreUsername: string;
+  autoreNome: string;
+  testo: string;
+  createdAt: string;
+}
+
+export interface MaterialeClasseDto {
+  id: number;
+  classeId: number;
+  caricatoDaUsername: string;
+  nome: string;
+  url: string;
+  tipo: string;
+  dataCaricamento: string;
+}
+
+export interface CompitoDto {
+  id: number;
+  classeId: number;
+  titolo: string;
+  descrizione?: string;
+  scadenza?: string;
+  puntiMax?: number;
+  createdAt: string;
+}
+
 export interface ClasseCorsoDto {
   id: number;
   nome: string;
@@ -220,6 +267,7 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Dashboard: undefined;
   Home: undefined;
+  Messaggi: undefined;
   Notifications: undefined;
   Profile: undefined;
 };
@@ -242,4 +290,6 @@ export type MainStackParamList = {
   AdminIstituti: undefined;
   AdminRuoloDetail: { ruoloId: number; ruoloNome: string };
   AdminDocenti: undefined;
+  PostDetail: { postId: number; initialLiked?: boolean; initialSaved?: boolean };
+  Settings: undefined;
 };
