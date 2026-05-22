@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AppState, StyleSheet, Text, Vibration, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,15 +22,58 @@ import AdminPermessiScreen from '../screens/admin/AdminPermessiScreen';
 import AdminIstitutiScreen from '../screens/admin/AdminIstitutiScreen';
 import AdminRuoloDetailScreen from '../screens/admin/AdminRuoloDetailScreen';
 import AdminDocentiScreen from '../screens/admin/AdminDocentiScreen';
+import PostDetailScreen from '../screens/main/PostDetailScreen';
+import SettingsScreen from '../screens/main/SettingsScreen';
 import { notificaService } from '../services/notificaService';
+import { messaggiService } from '../services/messaggiService';
+import { useNotifPrefs } from '../context/NotifPrefsContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
+const POLL_INTERVAL = 10000;
+
 type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
+// ─── Shared polling hook ──────────────────────────────────────────────────────
+function usePollingCount(fetchFn: () => Promise<number>, onIncrease: () => void): number {
+  const [count, setCount] = useState(0);
+  const prevRef = useRef(-1);
+  const fetchRef = useRef(fetchFn);
+  const onIncreaseRef = useRef(onIncrease);
+  fetchRef.current = fetchFn;
+  onIncreaseRef.current = onIncrease;
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const n = await fetchRef.current();
+        if (prevRef.current >= 0 && n > prevRef.current) {
+          onIncreaseRef.current();
+        }
+        prevRef.current = n;
+        setCount(n);
+      } catch {}
+    };
+
+    load();
+    const interval = setInterval(load, POLL_INTERVAL);
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') load();
+    });
+
+    return () => {
+      clearInterval(interval);
+      sub.remove();
+    };
+  }, []);
+
+  return count;
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
 function BadgeIcon({ name, color, count }: { name: MCIName; color: string; count: number }) {
   return (
     <View style={iconStyles.wrap}>
@@ -45,17 +88,24 @@ function BadgeIcon({ name, color, count }: { name: MCIName; color: string; count
 }
 
 function NotificationIcon({ color, focused }: { color: string; focused: boolean }) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    const load = () =>
-      notificaService.getContatore().then(r => setCount(r.nonLette)).catch(() => {});
-    load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const { prefs } = useNotifPrefs();
+  const count = usePollingCount(
+    () => notificaService.getContatore().then(r => r.nonLette),
+    () => { if (prefs.vibraNotifiche) Vibration.vibrate(300); },
+  );
   return <BadgeIcon name={focused ? 'bell' : 'bell-outline'} color={color} count={count} />;
 }
 
+function MessagesIcon({ color, focused }: { color: string; focused: boolean }) {
+  const { prefs } = useNotifPrefs();
+  const count = usePollingCount(
+    () => messaggiService.getNonLettiTotale().then(r => r.nonLetti),
+    () => { if (prefs.vibraMessaggi) Vibration.vibrate([0, 150, 80, 150]); },
+  );
+  return <BadgeIcon name={focused ? 'chat' : 'chat-outline'} color={color} count={count} />;
+}
+
+// ─── Tab navigator ────────────────────────────────────────────────────────────
 function MainTabs() {
   const { colors: C, isDark } = useTheme();
   const { bottom } = useSafeAreaInsets();
@@ -108,6 +158,17 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
+        name="Messaggi"
+        component={MessaggiScreen}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Messaggi',
+          tabBarIcon: ({ color, focused }) => (
+            <MessagesIcon color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}
         options={{
@@ -137,6 +198,7 @@ function MainTabs() {
   );
 }
 
+// ─── Stack navigator ──────────────────────────────────────────────────────────
 export default function MainNavigator() {
   const { colors: C } = useTheme();
   return (
@@ -172,6 +234,8 @@ export default function MainNavigator() {
         options={({ route }) => ({ title: `Permessi — ${(route.params as any).ruoloNome}` })}
       />
       <Stack.Screen name="AdminDocenti" component={AdminDocentiScreen} options={{ title: 'Gestisci Docenti' }} />
+      <Stack.Screen name="PostDetail" component={PostDetailScreen} options={{ title: 'Post' }} />
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Impostazioni' }} />
     </Stack.Navigator>
   );
 }
