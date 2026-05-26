@@ -1,17 +1,22 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, SectionList, StyleSheet, ActivityIndicator,
-  Alert, RefreshControl, TouchableOpacity, TextInput, Modal,
-  KeyboardAvoidingView, Platform, ScrollView,
+  Alert, RefreshControl, TouchableOpacity,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme, ThemeColors } from '../../context/ThemeContext';
+import { PermessoAdminDto } from '../../types';
 import { adminService } from '../../services/adminService';
+import { useAdminList } from '../../hooks/useAdminList';
+import { AdminEmptyState } from '../../components/admin/AdminEmptyState';
+import { AdminCountBar } from '../../components/admin/AdminCountBar';
+import { FormModal } from '../../components/admin/FormModal';
+import { Field } from '../../components/admin/Field';
+import { confirmDelete } from '../../utils/confirmDelete';
 
 const makeStyles = (C: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
-  emptyText: { color: C.textSoft, fontSize: 14 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   sectionHeader: {
     paddingHorizontal: 16, paddingVertical: 8,
     backgroundColor: C.bg,
@@ -32,90 +37,40 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   },
   aliasText: { fontSize: 10, fontWeight: '700', color: C.textSoft },
   deleteBtn: { padding: 4 },
-  countBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border,
-    paddingHorizontal: 16, paddingVertical: 10,
-  },
-  countText: { fontSize: 13, color: C.textSoft, fontWeight: '600' },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: C.primary, borderRadius: 999,
-    paddingHorizontal: 12, paddingVertical: 6,
-  },
-  addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  // Modal
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: C.card, borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32, gap: 14,
-  },
-  sheetTitle: { fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 4 },
-  label: { fontSize: 12, fontWeight: '600', color: C.textSoft, marginBottom: 4 },
-  input: {
-    backgroundColor: C.inputBg, borderRadius: 10, borderWidth: 1, borderColor: C.border,
-    paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.text,
-  },
-  submitBtn: {
-    backgroundColor: C.primary, borderRadius: 12,
-    paddingVertical: 14, alignItems: 'center', marginTop: 4,
-  },
-  submitText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  cancelBtn: { alignItems: 'center', paddingVertical: 8 },
-  cancelText: { color: C.textSoft, fontSize: 14 },
 });
 
 export default function AdminPermessiScreen() {
   const { colors: C } = useTheme();
   const styles = makeStyles(C);
-  const [sections, setSections] = useState<{ title: string; data: any[] }[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { items: permessi, setItems: setPermessi, loading, refreshing, refresh, reload } = useAdminList(
+    () => adminService.getPermessi(),
+    'Impossibile caricare i permessi.'
+  );
+
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ nome: '', alias: '' });
 
-  const load = useCallback(async () => {
-    try {
-      const data = await adminService.getPermessi();
-      setTotal(data.length);
-      const grouped: Record<string, any[]> = {};
-      for (const p of data) {
-        const gruppo = p.gruppo?.nome ?? 'Altro';
-        if (!grouped[gruppo]) grouped[gruppo] = [];
-        grouped[gruppo].push(p);
-      }
-      setSections(Object.entries(grouped).map(([title, items]) => ({ title, data: items })));
-    } catch {
-      Alert.alert('Errore', 'Impossibile caricare i permessi.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const sections = useMemo(() => {
+    const grouped: Record<string, PermessoAdminDto[]> = {};
+    for (const p of permessi) {
+      const gruppo = p.gruppo?.nome ?? 'Altro';
+      if (!grouped[gruppo]) grouped[gruppo] = [];
+      grouped[gruppo].push(p);
     }
-  }, []);
-
-  useEffect(() => { load(); }, []);
+    return Object.entries(grouped).map(([title, data]) => ({ title, data }));
+  }, [permessi]);
 
   function handleDelete(id: number, nome: string) {
-    Alert.alert('Elimina permesso', `Vuoi eliminare "${nome}"?`, [
-      { text: 'Annulla', style: 'cancel' },
-      {
-        text: 'Elimina', style: 'destructive',
-        onPress: async () => {
-          try {
-            await adminService.eliminaPermesso(id);
-            setSections(prev => prev
-              .map(s => ({ ...s, data: s.data.filter(p => p.id !== id) }))
-              .filter(s => s.data.length > 0)
-            );
-            setTotal(t => t - 1);
-          } catch {
-            Alert.alert('Errore', 'Impossibile eliminare il permesso.');
-          }
-        },
+    confirmDelete(
+      'Elimina permesso',
+      `Vuoi eliminare "${nome}"?`,
+      async () => {
+        await adminService.eliminaPermesso(id);
+        setPermessi(prev => prev.filter(p => p.id !== id));
       },
-    ]);
+      'Impossibile eliminare il permesso.'
+    );
   }
 
   async function handleCreate() {
@@ -126,12 +81,12 @@ export default function AdminPermessiScreen() {
     }
     setSaving(true);
     try {
-      const newP = await adminService.creaPermesso({ nome: nome.trim(), alias: alias.trim().toUpperCase() });
+      await adminService.creaPermesso({ nome: nome.trim(), alias: alias.trim().toUpperCase() });
       setForm({ nome: '', alias: '' });
       setShowModal(false);
-      await load();
+      reload();
     } catch {
-      Alert.alert('Errore', 'Impossibile creare il permesso. L\'alias potrebbe essere già in uso.');
+      Alert.alert('Errore', "Impossibile creare il permesso. L'alias potrebbe essere già in uso.");
     } finally {
       setSaving(false);
     }
@@ -145,22 +100,15 @@ export default function AdminPermessiScreen() {
         style={styles.page}
         sections={sections}
         keyExtractor={item => String(item.id)}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.primary} />}
         ListHeaderComponent={
-          <View style={styles.countBar}>
-            <Text style={styles.countText}>{total} permessi configurati</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => setShowModal(true)}>
-              <MaterialCommunityIcons name="plus" size={14} color="#fff" />
-              <Text style={styles.addBtnText}>Nuovo</Text>
-            </TouchableOpacity>
-          </View>
+          <AdminCountBar
+            label={`${permessi.length} permessi configurati`}
+            onAdd={() => setShowModal(true)}
+            addLabel="Nuovo"
+          />
         }
-        ListEmptyComponent={
-          <View style={styles.center}>
-            <MaterialCommunityIcons name="key-off-outline" size={48} color={C.textMuted} />
-            <Text style={styles.emptyText}>Nessun permesso</Text>
-          </View>
-        }
+        ListEmptyComponent={<AdminEmptyState icon="key-outline" text="Nessun permesso" />}
         renderSectionHeader={({ section }) => (
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{section.title} ({section.data.length})</Text>
@@ -180,40 +128,28 @@ export default function AdminPermessiScreen() {
         )}
       />
 
-      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
-        <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={styles.sheet} keyboardShouldPersistTaps="handled">
-            <Text style={styles.sheetTitle}>Nuovo Permesso</Text>
-            <View>
-              <Text style={styles.label}>Nome</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="es. Lettura permessi"
-                placeholderTextColor={C.textMuted}
-                value={form.nome}
-                onChangeText={v => setForm(p => ({ ...p, nome: v }))}
-              />
-            </View>
-            <View>
-              <Text style={styles.label}>Alias (identificativo univoco)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="es. PERMESSO_READ"
-                placeholderTextColor={C.textMuted}
-                value={form.alias}
-                onChangeText={v => setForm(p => ({ ...p, alias: v.toUpperCase() }))}
-                autoCapitalize="characters"
-              />
-            </View>
-            <TouchableOpacity style={styles.submitBtn} onPress={handleCreate} disabled={saving}>
-              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Crea permesso</Text>}
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowModal(false)}>
-              <Text style={styles.cancelText}>Annulla</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
+      <FormModal
+        visible={showModal}
+        onClose={() => setShowModal(false)}
+        title="Nuovo Permesso"
+        onSubmit={handleCreate}
+        saving={saving}
+        submitLabel="Crea permesso"
+      >
+        <Field
+          label="Nome"
+          placeholder="es. Lettura permessi"
+          value={form.nome}
+          onChangeText={v => setForm(p => ({ ...p, nome: v }))}
+        />
+        <Field
+          label="Alias (identificativo univoco)"
+          placeholder="es. PERMESSO_READ"
+          value={form.alias}
+          onChangeText={v => setForm(p => ({ ...p, alias: v.toUpperCase() }))}
+          autoCapitalize="characters"
+        />
+      </FormModal>
     </>
   );
 }

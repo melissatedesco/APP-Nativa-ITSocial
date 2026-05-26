@@ -10,6 +10,9 @@ export type FeedTab = 'pertе' | 'seguiti' | 'tendenze';
 
 const PAGE_SIZE = 20;
 
+// Cache module-level: sopravvive ai remount, usata come fallback offline
+const feedCache = new Map<FeedTab, Post[]>();
+
 function parsePostError(err: unknown): string {
   if (axios.isAxiosError(err)) {
     if (!err.response) return 'Impossibile raggiungere il server. Controlla la connessione.';
@@ -58,27 +61,48 @@ export function useFeed(): UseFeedReturn {
 
   async function fetchPosts(currentTab: FeedTab, pg: number, append: boolean): Promise<void> {
     setFeedError(null);
+
+    // Stale-while-revalidate: mostra la cache subito su caricamento iniziale
+    if (!append && pg === 0) {
+      const cached = feedCache.get(currentTab);
+      if (cached) {
+        setPosts(cached);
+        setHasMore(false);
+      }
+    }
+
     try {
       let data: Post[];
       if (currentTab === 'seguiti') {
-        data = await postService.getFeedSeguiti();
+        data = await postService.getFeedSeguiti(pg, PAGE_SIZE);
       } else if (currentTab === 'tendenze') {
-        data = await postService.getTrending(20);
+        data = await postService.getTrending(pg, PAGE_SIZE);
       } else {
         data = await postService.getFeed(pg, PAGE_SIZE);
       }
       const arr = Array.isArray(data) ? data : [];
       if (append) {
         setPosts(prev => {
-          const existingIds = new Set(prev.map(p => p.id));
-          return [...prev, ...arr.filter(p => !existingIds.has(p.id))];
+          const merged = [...prev, ...arr.filter(p => !new Set(prev.map(q => q.id)).has(p.id))];
+          feedCache.set(currentTab, merged);
+          return merged;
         });
       } else {
+        feedCache.set(currentTab, arr);
         setPosts(arr);
       }
-      setHasMore(currentTab === 'pertе' && arr.length === PAGE_SIZE);
+      setHasMore(arr.length === PAGE_SIZE);
     } catch (err) {
-      if (!append) setPosts([]);
+      if (!append) {
+        const cached = feedCache.get(currentTab);
+        if (cached) {
+          // Rete assente: mostra la cache senza sovrascrivere, blocca il caricamento
+          setPosts(cached);
+          setHasMore(false);
+        } else {
+          setPosts([]);
+        }
+      }
       setFeedError(parsePostError(err));
     }
   }
@@ -128,7 +152,7 @@ export function useFeed(): UseFeedReturn {
   }, [tab]);
 
   function loadMore(): void {
-    if (isLoadingMore || !hasMore || tab === 'seguiti' || tab === 'tendenze') return;
+    if (isLoadingMore || !hasMore) return;
     const nextPage = page + 1;
     setPage(nextPage);
     setIsLoadingMore(true);

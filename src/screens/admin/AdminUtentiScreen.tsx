@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, RefreshControl,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -9,11 +9,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, ThemeColors, getRuoloBadge } from '../../context/ThemeContext';
 import { adminService } from '../../services/adminService';
 import { MainStackParamList } from '../../types';
+import { useAdminList } from '../../hooks/useAdminList';
+import { AdminEmptyState } from '../../components/admin/AdminEmptyState';
+import { AdminCountBar } from '../../components/admin/AdminCountBar';
+import { confirmDelete } from '../../utils/confirmDelete';
 
 const makeStyles = (C: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
-  emptyText: { color: C.textSoft, fontSize: 14 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 16, paddingVertical: 14,
@@ -34,50 +37,27 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   },
   badgeText: { fontSize: 10, fontWeight: '700' },
   deleteBtn: { padding: 6 },
-  countBar: {
-    backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border,
-    paddingHorizontal: 16, paddingVertical: 10,
-  },
-  countText: { fontSize: 13, color: C.textSoft, fontWeight: '600' },
 });
 
 export default function AdminUtentiScreen() {
   const { colors: C } = useTheme();
   const styles = makeStyles(C);
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const [utenti, setUtenti] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const data = await adminService.getUtenti();
-      setUtenti(data);
-    } catch {
-      Alert.alert('Errore', 'Impossibile caricare gli utenti.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, []);
+  const { items: utenti, setItems: setUtenti, loading, refreshing, refresh } = useAdminList(
+    () => adminService.getUtenti(),
+    'Impossibile caricare gli utenti.'
+  );
 
   function handleDelete(id: number, username: string) {
-    Alert.alert('Elimina utente', `Vuoi eliminare @${username}?`, [
-      { text: 'Annulla', style: 'cancel' },
-      {
-        text: 'Elimina', style: 'destructive',
-        onPress: async () => {
-          try {
-            await adminService.eliminaUtente(id);
-            setUtenti(prev => prev.filter(u => u.id !== id));
-          } catch {
-            Alert.alert('Errore', 'Impossibile eliminare l\'utente.');
-          }
-        },
+    confirmDelete(
+      'Elimina utente',
+      `Vuoi eliminare @${username}?`,
+      async () => {
+        await adminService.eliminaUtente(id);
+        setUtenti(prev => prev.filter(u => u.id !== id));
       },
-    ]);
+      "Impossibile eliminare l'utente."
+    );
   }
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={C.primary} /></View>;
@@ -87,18 +67,9 @@ export default function AdminUtentiScreen() {
       style={styles.page}
       data={utenti}
       keyExtractor={item => String(item.id)}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.primary} />}
-      ListHeaderComponent={
-        <View style={styles.countBar}>
-          <Text style={styles.countText}>{utenti.length} utenti registrati</Text>
-        </View>
-      }
-      ListEmptyComponent={
-        <View style={styles.center}>
-          <MaterialCommunityIcons name="account-off-outline" size={48} color={C.textMuted} />
-          <Text style={styles.emptyText}>Nessun utente</Text>
-        </View>
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.primary} />}
+      ListHeaderComponent={<AdminCountBar label={`${utenti.length} utenti registrati`} />}
+      ListEmptyComponent={<AdminEmptyState icon="account-off-outline" text="Nessun utente" />}
       renderItem={({ item }) => {
         const ruoloTag = getRuoloBadge(item.ruolo?.nome);
         const letter = (item.username?.[0] ?? '?').toUpperCase();

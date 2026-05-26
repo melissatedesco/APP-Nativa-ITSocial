@@ -7,8 +7,10 @@ export const messaggiService = {
     return data;
   },
 
-  async getConversazione(username: string): Promise<ConversazioneDto> {
-    const { data } = await api.get<ConversazioneDto>(`/messaggi/conversazioni/${username}`);
+  async getConversazione(username: string, after?: number): Promise<ConversazioneDto> {
+    const { data } = await api.get<ConversazioneDto>(`/messaggi/conversazioni/${username}`, {
+      params: after != null ? { after } : undefined,
+    });
     return data;
   },
 

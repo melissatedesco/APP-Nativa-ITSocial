@@ -7,14 +7,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme, ThemeColors } from '../../context/ThemeContext';
 import { adminService } from '../../services/adminService';
-import { MainStackParamList } from '../../types';
+import { MainStackParamList, PermessoAdminDto } from '../../types';
+import { AdminEmptyState } from '../../components/admin/AdminEmptyState';
 
 type RouteT = RouteProp<MainStackParamList, 'AdminRuoloDetail'>;
 
 const makeStyles = (C: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
-  emptyText: { color: C.textSoft, fontSize: 14 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   infoBar: {
     backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border,
     paddingHorizontal: 16, paddingVertical: 12, gap: 2,
@@ -44,7 +44,7 @@ export default function AdminRuoloDetailScreen() {
   const { params } = useRoute<RouteT>();
   const { ruoloId, ruoloNome } = params;
 
-  const [sections, setSections] = useState<{ title: string; data: any[] }[]>([]);
+  const [sections, setSections] = useState<{ title: string; data: PermessoAdminDto[] }[]>([]);
   const [assignedIds, setAssignedIds] = useState<Set<number>>(new Set());
   const [toggling, setToggling] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -57,18 +57,16 @@ export default function AdminRuoloDetailScreen() {
         adminService.getPermessi(),
         adminService.getPermessiPerRuolo(ruoloId),
       ]);
-
-      const ids = new Set<number>(assegnati.map((p: any) => p.id as number));
+      const ids = new Set<number>(assegnati.map(p => p.id));
       setAssignedIds(ids);
       setAssignedCount(ids.size);
-
-      const grouped: Record<string, any[]> = {};
+      const grouped: Record<string, PermessoAdminDto[]> = {};
       for (const p of tutti) {
         const gruppo = p.gruppo?.nome ?? 'Altro';
         if (!grouped[gruppo]) grouped[gruppo] = [];
         grouped[gruppo].push(p);
       }
-      setSections(Object.entries(grouped).map(([title, items]) => ({ title, data: items })));
+      setSections(Object.entries(grouped).map(([title, data]) => ({ title, data })));
     } catch {
       Alert.alert('Errore', 'Impossibile caricare i permessi.');
     } finally {
@@ -105,19 +103,20 @@ export default function AdminRuoloDetailScreen() {
       style={styles.page}
       sections={sections}
       keyExtractor={item => String(item.id)}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.primary} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => { setRefreshing(true); load(); }}
+          tintColor={C.primary}
+        />
+      }
       ListHeaderComponent={
         <View style={styles.infoBar}>
           <Text style={styles.infoTitle}>Ruolo: {ruoloNome}</Text>
           <Text style={styles.infoSub}>{assignedCount} permessi attivi — attiva o disattiva con il toggle</Text>
         </View>
       }
-      ListEmptyComponent={
-        <View style={styles.center}>
-          <MaterialCommunityIcons name="key-off-outline" size={48} color={C.textMuted} />
-          <Text style={styles.emptyText}>Nessun permesso disponibile</Text>
-        </View>
-      }
+      ListEmptyComponent={<AdminEmptyState icon="key-outline" text="Nessun permesso disponibile" />}
       renderSectionHeader={({ section }) => (
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{section.title} ({section.data.length})</Text>
@@ -125,7 +124,7 @@ export default function AdminRuoloDetailScreen() {
       )}
       renderItem={({ item }) => {
         const assigned = assignedIds.has(item.id);
-        const loading = toggling.has(item.id);
+        const isToggling = toggling.has(item.id);
         return (
           <View style={styles.row}>
             <MaterialCommunityIcons
@@ -137,7 +136,7 @@ export default function AdminRuoloDetailScreen() {
               <Text style={styles.nome}>{item.nome}</Text>
               <Text style={styles.alias}>{item.alias}</Text>
             </View>
-            {loading
+            {isToggling
               ? <ActivityIndicator size="small" color={C.primary} />
               : <Switch
                   value={assigned}

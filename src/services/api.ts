@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { storage } from '../utils/storage';
 import { authEvents } from '../utils/authEvents';
+import { networkEvents } from '../utils/networkEvents';
 import { HOST, API_BASE_URL } from '../config';
 
 export const MEDIA_BASE_URL = HOST;
@@ -60,6 +61,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => {
     console.log('[API ←]', response.status, response.config.url);
+    networkEvents.emitOnline();
     return response;
   },
   async (error) => {
@@ -83,6 +85,11 @@ api.interceptors.response.use(
     console.error('─────────────────────────────────────────────────');
 
     const status = error.response?.status;
+
+    // Nessuna risposta = rete assente
+    if (!error.response && !axios.isCancel(error)) {
+      networkEvents.emitOffline();
+    }
 
     if (status === 401) {
       await storage.clearAuth();

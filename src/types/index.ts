@@ -234,6 +234,8 @@ export interface ClasseCorsoDto {
   professoreUsername?: string;
   professoreNome?: string;
   numeroStudenti: number;
+  istitutoId?: number;
+  istitutoNome?: string;
   createdAt?: string;
 }
 
@@ -247,6 +249,44 @@ export interface IscrizioneClasseDto {
   stato: 'IN_ATTESA' | 'APPROVATA' | 'RIFIUTATA' | string;
   dataRichiesta?: string;
   dataRisposta?: string;
+}
+
+export interface IstitutoDto {
+  id: number;
+  nome: string;
+  descrizione?: string;
+  citta?: string;
+  numeroClassi: number;
+  createdAt?: string;
+}
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
+export interface PermessoAdminDto {
+  id: number;
+  nome: string;
+  alias: string;
+  gruppo?: GruppoDto;
+}
+
+export interface RuoloPermessoDto {
+  id: number;
+  permesso?: PermessoAdminDto;
+  alias?: string;
+}
+
+export interface RuoloAdminDto {
+  id: number;
+  nome: string;
+  alias: string;
+  ruoloPermessi?: RuoloPermessoDto[];
+}
+
+export interface ProfessoreDto {
+  id: number;
+  nome: string;
+  cognome: string;
+  email: string;
+  username: string;
 }
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
@@ -288,6 +328,7 @@ export type MainStackParamList = {
   AdminRuoli: undefined;
   AdminPermessi: undefined;
   AdminIstituti: undefined;
+  AdminClasseCorso: undefined;
   AdminRuoloDetail: { ruoloId: number; ruoloNome: string };
   AdminDocenti: undefined;
   PostDetail: { postId: number; initialLiked?: boolean; initialSaved?: boolean };

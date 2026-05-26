@@ -113,11 +113,19 @@ export default function AdminPanelScreen() {
       onPress: () => navigation.navigate('AdminPermessi'),
     },
     {
-      title: 'Gestisci Istituti',
+      title: 'Gestisci Classi Corso',
       desc: 'Visualizza le classi e i docenti assegnati',
-      icon: 'school',
-      bg: '#FDF4FF',
-      color: '#9333EA',
+      icon: 'book-open-variant',
+      bg: '#EFF6FF',
+      color: '#2563EB',
+      onPress: () => navigation.navigate('AdminClasseCorso'),
+    },
+    {
+      title: 'Gestisci Istituti',
+      desc: 'Visualizza e gestisci gli istituti scolastici',
+      icon: 'domain',
+      bg: '#F0FDF4',
+      color: '#16A34A',
       onPress: () => navigation.navigate('AdminIstituti'),
     },
     {

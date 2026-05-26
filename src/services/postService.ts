@@ -7,8 +7,8 @@ export const postService = {
     return data;
   },
 
-  async getTrending(limit = 10): Promise<Post[]> {
-    const { data } = await api.get<Post[]>('/post/tendenze', { params: { limit } });
+  async getTrending(page = 0, size = 20): Promise<Post[]> {
+    const { data } = await api.get<Post[]>('/post/tendenze', { params: { size, page } });
     return data;
   },
 
@@ -22,8 +22,8 @@ export const postService = {
     return data;
   },
 
-  async getFeedSeguiti(): Promise<Post[]> {
-    const { data } = await api.get<Post[]>('/post/seguiti');
+  async getFeedSeguiti(page = 0, size = 20): Promise<Post[]> {
+    const { data } = await api.get<Post[]>('/post/seguiti', { params: { page, size } });
     return data;
   },
 

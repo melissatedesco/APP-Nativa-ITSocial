@@ -1,26 +1,22 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, ActivityIndicator,
-  Alert, RefreshControl,
+  RefreshControl, TouchableOpacity, Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme, ThemeColors } from '../../context/ThemeContext';
 import { adminService } from '../../services/adminService';
-
-const TIPO_COLORS: Record<string, { bg: string; color: string }> = {
-  PUBBLICA:  { bg: '#EFF6FF', color: '#2563EB' },
-  PRIVATA:   { bg: '#FDF4FF', color: '#9333EA' },
-};
+import { IstitutoDto } from '../../types';
+import { useAdminList } from '../../hooks/useAdminList';
+import { AdminEmptyState } from '../../components/admin/AdminEmptyState';
+import { AdminCountBar } from '../../components/admin/AdminCountBar';
+import { FormModal } from '../../components/admin/FormModal';
+import { Field } from '../../components/admin/Field';
+import { confirmDelete } from '../../utils/confirmDelete';
 
 const makeStyles = (C: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
-  emptyText: { color: C.textSoft, fontSize: 14 },
-  countBar: {
-    backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border,
-    paddingHorizontal: 16, paddingVertical: 10,
-  },
-  countText: { fontSize: 13, color: C.textSoft, fontWeight: '600' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   card: {
     marginHorizontal: 12, marginVertical: 6,
     backgroundColor: C.card, borderRadius: 14,
@@ -31,140 +27,179 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   iconWrap: {
     width: 42, height: 42, borderRadius: 12,
     justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F0FDF4',
   },
   cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: C.text },
-  tipoChip: {
-    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3,
-  },
-  tipoText: { fontSize: 11, fontWeight: '700' },
   descText: { fontSize: 13, color: C.textSoft, lineHeight: 18 },
   divider: { height: 1, backgroundColor: C.border },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   infoText: { fontSize: 13, color: C.textSoft },
-  docenteRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: C.inputBg, borderRadius: 10, padding: 10,
+  cardActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  actionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1,
   },
-  docenteAvatar: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: C.primary, justifyContent: 'center', alignItems: 'center',
-  },
-  docenteAvatarText: { color: '#fff', fontWeight: '800', fontSize: 13 },
-  docenteInfo: { flex: 1 },
-  docenteName: { fontSize: 13, fontWeight: '700', color: C.text },
-  docenteUsername: { fontSize: 11, color: C.textSoft },
-  noDocenteRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: C.inputBg, borderRadius: 10, padding: 10,
-  },
-  noDocenteText: { fontSize: 13, color: C.textMuted, fontStyle: 'italic' },
+  actionBtnText: { fontSize: 12, fontWeight: '600' },
 });
+
+type FormState = { nome: string; descrizione: string; citta: string };
 
 export default function AdminIstitutiScreen() {
   const { colors: C } = useTheme();
   const styles = makeStyles(C);
-  const [classi, setClassi] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const { items: istituti, setItems: setIstituti, loading, refreshing, refresh, reload } = useAdminList(
+    () => adminService.getIstituti(),
+    'Impossibile caricare gli istituti.'
+  );
+
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<FormState>({ nome: '', descrizione: '', citta: '' });
+
+  function openCreate() {
+    setEditingId(null);
+    setForm({ nome: '', descrizione: '', citta: '' });
+    setShowModal(true);
+  }
+
+  function openEdit(item: IstitutoDto) {
+    setEditingId(item.id);
+    setForm({ nome: item.nome, descrizione: item.descrizione ?? '', citta: item.citta ?? '' });
+    setShowModal(true);
+  }
+
+  async function handleSubmit() {
+    if (!form.nome.trim()) { Alert.alert('Attenzione', 'Il nome è obbligatorio.'); return; }
+    setSaving(true);
     try {
-      setClassi(await adminService.getClassi());
+      const payload = {
+        nome: form.nome.trim(),
+        descrizione: form.descrizione.trim() || undefined,
+        citta: form.citta.trim() || undefined,
+      };
+      if (editingId !== null) {
+        const updated = await adminService.modificaIstituto(editingId, payload);
+        setIstituti(prev => prev.map(i => i.id === editingId ? updated : i));
+      } else {
+        await adminService.creaIstituto(payload);
+        reload();
+      }
+      setShowModal(false);
     } catch {
-      Alert.alert('Errore', 'Impossibile caricare gli istituti.');
+      Alert.alert('Errore', 'Impossibile salvare l\'istituto.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setSaving(false);
     }
-  }, []);
+  }
 
-  useEffect(() => { load(); }, []);
+  function handleDelete(id: number, nome: string) {
+    confirmDelete(
+      'Elimina istituto',
+      `Vuoi eliminare "${nome}"? Le classi associate perderanno il collegamento all'istituto.`,
+      async () => {
+        await adminService.eliminaIstituto(id);
+        setIstituti(prev => prev.filter(i => i.id !== id));
+      },
+      'Impossibile eliminare l\'istituto.'
+    );
+  }
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={C.primary} /></View>;
 
   return (
-    <FlatList
-      style={styles.page}
-      data={classi}
-      keyExtractor={item => String(item.id)}
-      contentContainerStyle={{ paddingVertical: 8 }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => { setRefreshing(true); load(); }}
-          tintColor={C.primary}
-        />
-      }
-      ListHeaderComponent={
-        <View style={styles.countBar}>
-          <Text style={styles.countText}>{classi.length} istituti registrati</Text>
-        </View>
-      }
-      ListEmptyComponent={
-        <View style={styles.center}>
-          <MaterialCommunityIcons name="school-outline" size={48} color={C.textMuted} />
-          <Text style={styles.emptyText}>Nessun istituto</Text>
-        </View>
-      }
-      renderItem={({ item }) => {
-        const tipoCol = TIPO_COLORS[item.tipo] ?? { bg: C.inputBg, color: C.textSoft };
-        const hasDocente = !!item.professoreNome;
-        const firstLetter = (item.professoreNome ?? '?')[0].toUpperCase();
-
-        return (
+    <>
+      <FlatList
+        style={styles.page}
+        data={istituti}
+        keyExtractor={item => String(item.id)}
+        contentContainerStyle={{ paddingVertical: 8 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.primary} />}
+        ListHeaderComponent={
+          <AdminCountBar
+            label={`${istituti.length} istituti registrati`}
+            onAdd={openCreate}
+            addLabel="Nuovo"
+          />
+        }
+        ListEmptyComponent={<AdminEmptyState icon="domain" text="Nessun istituto registrato" />}
+        renderItem={({ item }) => (
           <View style={styles.card}>
-            {/* Header */}
             <View style={styles.cardHeader}>
               <View style={styles.iconWrap}>
-                <MaterialCommunityIcons name="school" size={22} color="#2563EB" />
+                <MaterialCommunityIcons name="domain" size={22} color="#16A34A" />
               </View>
               <Text style={styles.cardTitle}>{item.nome}</Text>
-              <View style={[styles.tipoChip, { backgroundColor: tipoCol.bg }]}>
-                <Text style={[styles.tipoText, { color: tipoCol.color }]}>{item.tipo}</Text>
-              </View>
             </View>
-
-            {/* Descrizione */}
             {!!item.descrizione && (
               <Text style={styles.descText} numberOfLines={2}>{item.descrizione}</Text>
             )}
-
             <View style={styles.divider} />
-
-            {/* Statistiche */}
             <View style={{ flexDirection: 'row', gap: 16 }}>
+              {!!item.citta && (
+                <View style={styles.infoRow}>
+                  <MaterialCommunityIcons name="map-marker-outline" size={15} color={C.textSoft} />
+                  <Text style={styles.infoText}>{item.citta}</Text>
+                </View>
+              )}
               <View style={styles.infoRow}>
-                <MaterialCommunityIcons name="account-group-outline" size={15} color={C.textSoft} />
-                <Text style={styles.infoText}>{item.numeroStudenti ?? 0} studenti</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <MaterialCommunityIcons name="key-outline" size={15} color={C.textSoft} />
-                <Text style={styles.infoText}>{item.codiceInvito}</Text>
+                <MaterialCommunityIcons name="book-open-variant" size={15} color={C.textSoft} />
+                <Text style={styles.infoText}>{item.numeroClassi} classi</Text>
               </View>
             </View>
-
-            {/* Docente */}
-            {hasDocente ? (
-              <View style={styles.docenteRow}>
-                <View style={styles.docenteAvatar}>
-                  <Text style={styles.docenteAvatarText}>{firstLetter}</Text>
-                </View>
-                <View style={styles.docenteInfo}>
-                  <Text style={styles.docenteName}>{item.professoreNome}</Text>
-                  <Text style={styles.docenteUsername}>@{item.professoreUsername}</Text>
-                </View>
-                <MaterialCommunityIcons name="account-tie" size={18} color={C.textSoft} />
-              </View>
-            ) : (
-              <View style={styles.noDocenteRow}>
-                <MaterialCommunityIcons name="account-off-outline" size={16} color={C.textMuted} />
-                <Text style={styles.noDocenteText}>Nessun docente assegnato</Text>
-              </View>
-            )}
+            <View style={styles.divider} />
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={[styles.actionBtn, { borderColor: C.primary, backgroundColor: C.primary + '12' }]}
+                onPress={() => openEdit(item)}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="pencil-outline" size={14} color={C.primary} />
+                <Text style={[styles.actionBtnText, { color: C.primary }]}>Modifica</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, { borderColor: C.danger, backgroundColor: C.danger + '12' }]}
+                onPress={() => handleDelete(item.id, item.nome)}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="trash-can-outline" size={14} color={C.danger} />
+                <Text style={[styles.actionBtnText, { color: C.danger }]}>Elimina</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        );
-      }}
-    />
+        )}
+      />
+
+      <FormModal
+        visible={showModal}
+        onClose={() => setShowModal(false)}
+        title={editingId !== null ? 'Modifica Istituto' : 'Nuovo Istituto'}
+        onSubmit={handleSubmit}
+        saving={saving}
+        submitLabel={editingId !== null ? 'Salva modifiche' : 'Crea istituto'}
+      >
+        <Field
+          label="Nome"
+          placeholder="es. ITS Academy Milano"
+          value={form.nome}
+          onChangeText={v => setForm(p => ({ ...p, nome: v }))}
+        />
+        <Field
+          label="Città (opzionale)"
+          placeholder="es. Milano"
+          value={form.citta}
+          onChangeText={v => setForm(p => ({ ...p, citta: v }))}
+        />
+        <Field
+          label="Descrizione (opzionale)"
+          placeholder="Breve descrizione dell'istituto..."
+          value={form.descrizione}
+          onChangeText={v => setForm(p => ({ ...p, descrizione: v }))}
+          multiline
+        />
+      </FormModal>
+    </>
   );
 }
