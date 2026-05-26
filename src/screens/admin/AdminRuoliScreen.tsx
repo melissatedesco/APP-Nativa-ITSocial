@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import {
   View, Text, FlatList, StyleSheet,
-  ActivityIndicator, Alert, RefreshControl, TouchableOpacity,
+  ActivityIndicator, RefreshControl, TouchableOpacity,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, ThemeColors } from '../../context/ThemeContext';
 import { adminService } from '../../services/adminService';
 import { MainStackParamList } from '../../types';
+import { useAdminList } from '../../hooks/useAdminList';
+import { AdminEmptyState } from '../../components/admin/AdminEmptyState';
+import { AdminCountBar } from '../../components/admin/AdminCountBar';
 
 const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
   ADMIN:      { bg: '#FEF2F2', color: '#DC2626' },
@@ -19,8 +22,7 @@ const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
 
 const makeStyles = (C: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
-  emptyText: { color: C.textSoft, fontSize: 14 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   card: {
     marginHorizontal: 12, marginVertical: 6,
     backgroundColor: C.card, borderRadius: 14,
@@ -42,27 +44,16 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   },
   permText: { fontSize: 10, color: C.textSoft },
   countText: { fontSize: 12, color: C.textSoft, fontWeight: '600' },
-  countBar: {
-    backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border,
-    paddingHorizontal: 16, paddingVertical: 10,
-  },
 });
 
 export default function AdminRuoliScreen() {
   const { colors: C } = useTheme();
   const styles = makeStyles(C);
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const [ruoli, setRuoli] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    try { setRuoli(await adminService.getRuoli()); }
-    catch { Alert.alert('Errore', 'Impossibile caricare i ruoli.'); }
-    finally { setLoading(false); setRefreshing(false); }
-  }, []);
-
-  useEffect(() => { load(); }, []);
+  const { items: ruoli, loading, refreshing, refresh } = useAdminList(
+    () => adminService.getRuoli(),
+    'Impossibile caricare i ruoli.'
+  );
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={C.primary} /></View>;
 
@@ -72,18 +63,9 @@ export default function AdminRuoliScreen() {
       data={ruoli}
       keyExtractor={item => String(item.id)}
       contentContainerStyle={{ paddingVertical: 8 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={C.primary} />}
-      ListHeaderComponent={
-        <View style={styles.countBar}>
-          <Text style={styles.countText}>{ruoli.length} ruoli configurati</Text>
-        </View>
-      }
-      ListEmptyComponent={
-        <View style={styles.center}>
-          <MaterialCommunityIcons name="shield-off-outline" size={48} color={C.textMuted} />
-          <Text style={styles.emptyText}>Nessun ruolo</Text>
-        </View>
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={C.primary} />}
+      ListHeaderComponent={<AdminCountBar label={`${ruoli.length} ruoli configurati`} />}
+      ListEmptyComponent={<AdminEmptyState icon="shield-off-outline" text="Nessun ruolo" />}
       renderItem={({ item }) => {
         const roleKey = item.nome?.toUpperCase() ?? '';
         const col = ROLE_COLORS[roleKey] ?? { bg: C.inputBg, color: C.textSoft };
@@ -106,7 +88,7 @@ export default function AdminRuoliScreen() {
             <Text style={styles.countText}>{permCount} permessi assegnati</Text>
             {permCount > 0 && (
               <View style={styles.permRow}>
-                {(item.ruoloPermessi ?? []).slice(0, 8).map((rp: any) => (
+                {(item.ruoloPermessi ?? []).slice(0, 8).map(rp => (
                   <View key={rp.id} style={styles.permChip}>
                     <Text style={styles.permText}>{rp.permesso?.alias ?? rp.alias ?? '—'}</Text>
                   </View>

@@ -20,6 +20,7 @@ import AdminUtentiScreen from '../screens/admin/AdminUtentiScreen';
 import AdminRuoliScreen from '../screens/admin/AdminRuoliScreen';
 import AdminPermessiScreen from '../screens/admin/AdminPermessiScreen';
 import AdminIstitutiScreen from '../screens/admin/AdminIstitutiScreen';
+import AdminClasseCorsoScreen from '../screens/admin/AdminClasseCorsoScreen';
 import AdminRuoloDetailScreen from '../screens/admin/AdminRuoloDetailScreen';
 import AdminDocentiScreen from '../screens/admin/AdminDocentiScreen';
 import PostDetailScreen from '../screens/main/PostDetailScreen';
@@ -228,6 +229,7 @@ export default function MainNavigator() {
       <Stack.Screen name="AdminRuoli" component={AdminRuoliScreen} options={{ title: 'Gestisci Ruoli' }} />
       <Stack.Screen name="AdminPermessi" component={AdminPermessiScreen} options={{ title: 'Gestisci Permessi' }} />
       <Stack.Screen name="AdminIstituti" component={AdminIstitutiScreen} options={{ title: 'Gestisci Istituti' }} />
+      <Stack.Screen name="AdminClasseCorso" component={AdminClasseCorsoScreen} options={{ title: 'Gestisci Classi Corso' }} />
       <Stack.Screen
         name="AdminRuoloDetail"
         component={AdminRuoloDetailScreen}

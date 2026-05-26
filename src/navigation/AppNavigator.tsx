@@ -6,6 +6,7 @@ import { RootStackParamList } from '../types';
 import { useAuth } from '../context/AuthContext';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
+import { OfflineBanner } from '../components/OfflineBanner';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -25,14 +26,17 @@ export default function AppNavigator() {
   console.log('[AppNavigator] mounting NavigationContainer, rotta:', token ? 'Main' : 'Auth');
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {token ? (
-          <Stack.Screen name="Main" component={MainNavigator} />
-        ) : (
-          <Stack.Screen name="Auth" component={AuthNavigator} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <View style={{ flex: 1 }}>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {token ? (
+            <Stack.Screen name="Main" component={MainNavigator} />
+          ) : (
+            <Stack.Screen name="Auth" component={AuthNavigator} />
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+      <OfflineBanner />
+    </View>
   );
 }

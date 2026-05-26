@@ -8,9 +8,15 @@
 //   • Emulatore Android   → http://10.0.2.2:8080
 //   • Simulatore iOS      → http://localhost:8080
 //
-export const HOST = 'http://192.168.1.111:8080';
-// export const HOST = 'http://10.130.33.237:8080'
+import { Platform } from 'react-native';
+
+// Sul web (browser) si usa localhost; su dispositivo fisico l'IP LAN
+export const HOST = Platform.OS === 'web'
+  ? 'http://localhost:8080'
+  : 'http://192.168.1.29:8080';
+
 export const API_BASE_URL = `${HOST}/api`;
 
-// SmarTina chatbot (FastAPI su porta 5000)
-export const CHAT_BASE_URL = 'http://192.168.1.111:5000/chat/';
+export const CHAT_BASE_URL = Platform.OS === 'web'
+  ? 'http://localhost:5000/chat/'
+  : 'http://192.168.1.29:5000/chat/';

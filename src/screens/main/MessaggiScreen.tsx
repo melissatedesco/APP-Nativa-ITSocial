@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { storage } from '../../utils/storage';
+import { API_BASE_URL } from '../../config';
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +21,9 @@ import { useAuth } from '../../context/AuthContext';
 import { messaggiService } from '../../services/messaggiService';
 import { ConversazioneDto, MessaggioDto } from '../../types';
 import { useTheme, ThemeColors } from '../../context/ThemeContext';
+
+// Cache module-level: sopravvive ai remount, consente stale-while-revalidate
+const msgCache = new Map<string, { messages: MessaggioDto[]; lastId: number }>();
 
 type ScreenView = 'list' | 'chat';
 
@@ -287,29 +292,140 @@ function ChatView({
   const styles = makeStyles(C);
   const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
 
-  const [messages, setMessages] = useState<MessaggioDto[]>(conversation.messaggi ?? []);
-  const [loading, setLoading] = useState(conversation.messaggi === undefined);
+  const cached = msgCache.get(conversation.altroUtente.username);
+  const [messages, setMessages] = useState<MessaggioDto[]>(
+    conversation.messaggi ?? cached?.messages ?? []
+  );
+  const [loading, setLoading] = useState(
+    conversation.messaggi === undefined && !cached
+  );
   const [newText, setNewText] = useState('');
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const otherUsername = conversation.altroUtente.username;
+  const lastIdRef = useRef<number>(cached?.lastId ?? 0);
 
-  async function loadMessages() {
+  async function loadMessages(after?: number) {
+    // Stale-while-revalidate: mostra subito la cache su caricamento iniziale
+    if (after === undefined) {
+      const hit = msgCache.get(otherUsername);
+      if (hit) {
+        setMessages(hit.messages);
+        lastIdRef.current = hit.lastId;
+        setLoading(false);
+      }
+    }
+
     try {
-      const data = await messaggiService.getConversazione(otherUsername);
-      setMessages(data.messaggi ?? []);
+      const data = await messaggiService.getConversazione(otherUsername, after);
+      const incoming = data.messaggi ?? [];
+
+      if (after != null) {
+        // Fetch incrementale: aggiungi solo i messaggi nuovi
+        setMessages(prev => {
+          const known = new Set(prev.map(m => m.id));
+          const toAdd = incoming.filter(m => !known.has(m.id));
+          if (toAdd.length === 0) return prev;
+          const merged = [...prev, ...toAdd];
+          const newLastId = merged[merged.length - 1].id;
+          lastIdRef.current = newLastId;
+          msgCache.set(otherUsername, { messages: merged, lastId: newLastId });
+          return merged;
+        });
+      } else {
+        // Reload completo: sostituisci
+        const newLastId = incoming.length > 0
+          ? incoming[incoming.length - 1].id
+          : lastIdRef.current;
+        lastIdRef.current = newLastId;
+        msgCache.set(otherUsername, { messages: incoming, lastId: newLastId });
+        setMessages(incoming);
+      }
+
       messaggiService.segnaComeLetti(otherUsername).catch(() => {});
     } catch {
-      // stay with current messages
+      // mantieni i messaggi correnti
     } finally {
       setLoading(false);
     }
   }
 
+  const sseAbortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     if (loading) loadMessages();
-    const interval = setInterval(loadMessages, 5000);
-    return () => clearInterval(interval);
+
+    let stopped = false;
+    let retries = 0;
+    let fallbackInterval: ReturnType<typeof setInterval> | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    async function startSse() {
+      if (stopped) return;
+
+      const controller = new AbortController();
+      sseAbortRef.current = controller;
+
+      try {
+        const token = await storage.getToken();
+        if (stopped || !token) throw new Error('no-token');
+
+        const response = await fetch(
+          `${API_BASE_URL}/messaggi/stream/${otherUsername}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'text/event-stream',
+              'Cache-Control': 'no-cache',
+            },
+            signal: controller.signal,
+          }
+        );
+
+        if (!response.ok || !response.body) throw new Error('sse-unavailable');
+
+        retries = 0;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+
+        while (!stopped) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buf += decoder.decode(value, { stream: true });
+          const parts = buf.split('\n\n');
+          buf = parts.pop() ?? '';
+
+          for (const part of parts) {
+            const isMessage = part.split('\n').some(
+              l => l.startsWith('event:') && l.slice(6).trim() === 'messaggio'
+            );
+            // Fetch incrementale: solo i messaggi dopo l'ultimo noto
+            if (isMessage) loadMessages(lastIdRef.current);
+          }
+        }
+
+        if (!stopped) reconnectTimeout = setTimeout(startSse, 1000);
+      } catch {
+        if (stopped) return;
+        retries += 1;
+        if (retries <= 3) {
+          reconnectTimeout = setTimeout(startSse, 2000 * retries);
+        } else {
+          fallbackInterval = setInterval(() => loadMessages(lastIdRef.current), 5000);
+        }
+      }
+    }
+
+    startSse();
+
+    return () => {
+      stopped = true;
+      sseAbortRef.current?.abort();
+      if (fallbackInterval) clearInterval(fallbackInterval);
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -325,7 +441,12 @@ function ChatView({
     setNewText('');
     try {
       const msg = await messaggiService.invia(otherUsername, text);
-      setMessages(prev => [...prev, msg]);
+      setMessages(prev => {
+        const updated = [...prev, msg];
+        lastIdRef.current = msg.id;
+        msgCache.set(otherUsername, { messages: updated, lastId: msg.id });
+        return updated;
+      });
     } catch {
       Alert.alert('Errore', 'Impossibile inviare il messaggio.');
       setNewText(text);

@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
@@ -30,6 +31,8 @@ import { Post, CommentoDto, SondaggioDto, MainStackParamList } from '../../types
 import { useFeed, FeedTab } from '../../hooks/useFeed';
 import ImageViewerModal from '../../components/ImageViewerModal';
 import { SharedSidebar } from '../../components/SharedSidebar';
+import { WebNavSidebar } from '../../components/web/WebNavSidebar';
+import { WebRightPanel } from '../../components/web/WebRightPanel';
 
 function timeAgo(iso?: string): string {
   if (!iso) return '';
@@ -80,7 +83,14 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
 
   feedLoading: { paddingVertical: 24, alignItems: 'center' },
 
-  postCard: { marginHorizontal: 12, backgroundColor: C.card, borderRadius: 28, borderWidth: 1, borderColor: C.border, overflow: 'hidden', shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
+  postCard: {
+    backgroundColor: C.card,
+    overflow: 'hidden',
+    ...Platform.select({
+      web: { marginHorizontal: 0, borderRadius: 8, borderWidth: 1, borderColor: C.border },
+      default: { marginHorizontal: 12, borderRadius: 28, borderWidth: 1, borderColor: C.border, shadowColor: '#1E293B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 3 },
+    }),
+  },
   postHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, paddingBottom: 0 },
   postHeaderInfo: { flex: 1, gap: 2 },
   postHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
@@ -93,9 +103,23 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
 
   postContent: { fontSize: 14, color: C.text, lineHeight: 21, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4 },
 
-  imageContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 14, paddingBottom: 8 },
-  postImageSingle: { width: '100%', height: 200, borderRadius: 10, backgroundColor: C.border },
-  postImageGrid: { width: '48%', height: 150, borderRadius: 10, backgroundColor: C.border },
+  imageContainer: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 4,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 14,
+    paddingBottom: 8,
+  },
+  postImageSingle: {
+    width: '100%',
+    height: Platform.OS === 'web' ? 420 : 200,
+    borderRadius: Platform.OS === 'web' ? 0 : 10,
+    backgroundColor: C.border,
+  },
+  postImageGrid: {
+    width: '48%',
+    height: Platform.OS === 'web' ? 220 : 150,
+    borderRadius: 10,
+    backgroundColor: C.border,
+  },
 
   postActions: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.border, marginTop: 10, gap: 4 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999 },
@@ -608,12 +632,18 @@ export default function HomeScreen() {
   const { colors: C } = useTheme();
   const styles = makeStyles(C);
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { width } = useWindowDimensions();
   const { posts, likedIds, savedIds, tab, isLoading, isRefreshing, isLoadingMore, feedError, publishError, changeTab, refresh, loadMore, toggleLike, toggleSave, deletePost, publishPost } = useFeed();
   const currentUsername = user?.username ?? '';
 
+  const isWeb = Platform.OS === 'web';
+  const showLeftNav = isWeb && width >= 720;
+  const showRightPanel = isWeb && width >= 1100;
+  const showCollapsedNav = isWeb && width >= 600 && width < 720;
+
   const ListHeader = (
     <View>
-      <SmarTinaBanner onPress={() => navigation.navigate('SmartinaChat')} />
+      {!isWeb && <SmarTinaBanner onPress={() => navigation.navigate('SmartinaChat')} />}
       <View style={styles.tabBar}>
         {(['pertе', 'seguiti', 'tendenze'] as FeedTab[]).map((t) => (
           <TouchableOpacity key={t} style={[styles.tabBtn, tab === t && styles.tabBtnActive]} onPress={() => changeTab(t)} activeOpacity={0.8}>
@@ -632,55 +662,77 @@ export default function HomeScreen() {
     </View>
   );
 
+  const feedList = (
+    <FlatList
+      data={isLoading ? [] : posts}
+      keyExtractor={(item) => String(item.id)}
+      style={styles.page}
+      contentContainerStyle={[styles.listContent, isWeb && { paddingHorizontal: 0 }]}
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={C.primary} />}
+      ListHeaderComponent={ListHeader}
+      onEndReached={loadMore}
+      onEndReachedThreshold={0.4}
+      ListEmptyComponent={
+        !isLoading ? (
+          feedError ? (
+            <View style={styles.errorState}>
+              <Text style={styles.errorStateEmoji}>😕</Text>
+              <Text style={styles.errorStateTitle}>Impossibile caricare il feed</Text>
+              <Text style={styles.errorStateMessage}>{feedError}</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={refresh} activeOpacity={0.8}>
+                <Text style={styles.retryBtnText}>Riprova</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>📭</Text>
+              <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
+              <Text style={styles.emptySubtitle}>
+                {tab === 'seguiti' ? 'Segui altri utenti per vedere i loro post.' : tab === 'tendenze' ? 'Non ci sono post in tendenza.' : 'Sii il primo a pubblicare qualcosa!'}
+              </Text>
+            </View>
+          )
+        ) : null
+      }
+      ListFooterComponent={isLoadingMore ? <View style={styles.loadingMore}><ActivityIndicator color={C.primary} size="small" /></View> : null}
+      renderItem={({ item }) => (
+        <PostCard
+          post={item}
+          liked={likedIds.has(item.id)}
+          saved={savedIds.has(item.id)}
+          onLike={toggleLike}
+          onSave={toggleSave}
+          onDelete={deletePost}
+          onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
+          onPressDetail={() => navigation.navigate('PostDetail', { postId: item.id, initialLiked: likedIds.has(item.id), initialSaved: savedIds.has(item.id) })}
+          currentUsername={currentUsername}
+        />
+      )}
+      ItemSeparatorComponent={() => <View style={{ height: isWeb ? 12 : 10 }} />}
+    />
+  );
+
+  if (isWeb) {
+    return (
+      <View style={{ flex: 1, flexDirection: 'row', backgroundColor: C.bg }}>
+        {showLeftNav && <WebNavSidebar collapsed={false} />}
+        {showCollapsedNav && <WebNavSidebar collapsed />}
+
+        {/* Center feed column */}
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <View style={{ width: '100%' as any, maxWidth: 660 as any, flex: 1 }}>
+            {feedList}
+          </View>
+        </View>
+
+        {showRightPanel && <WebRightPanel />}
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1 }}>
-      <FlatList
-        data={isLoading ? [] : posts}
-        keyExtractor={(item) => String(item.id)}
-        style={styles.page}
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={C.primary} />}
-        ListHeaderComponent={ListHeader}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.4}
-        ListEmptyComponent={
-          !isLoading ? (
-            feedError ? (
-              <View style={styles.errorState}>
-                <Text style={styles.errorStateEmoji}>😕</Text>
-                <Text style={styles.errorStateTitle}>Impossibile caricare il feed</Text>
-                <Text style={styles.errorStateMessage}>{feedError}</Text>
-                <TouchableOpacity style={styles.retryBtn} onPress={refresh} activeOpacity={0.8}>
-                  <Text style={styles.retryBtnText}>Riprova</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyEmoji}>📭</Text>
-                <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
-                <Text style={styles.emptySubtitle}>
-                  {tab === 'seguiti' ? 'Segui altri utenti per vedere i loro post.' : tab === 'tendenze' ? 'Non ci sono post in tendenza.' : 'Sii il primo a pubblicare qualcosa!'}
-                </Text>
-              </View>
-            )
-          ) : null
-        }
-        ListFooterComponent={isLoadingMore ? <View style={styles.loadingMore}><ActivityIndicator color={C.primary} size="small" /></View> : null}
-        renderItem={({ item }) => (
-          <PostCard
-            post={item}
-            liked={likedIds.has(item.id)}
-            saved={savedIds.has(item.id)}
-            onLike={toggleLike}
-            onSave={toggleSave}
-            onDelete={deletePost}
-            onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
-            onPressDetail={() => navigation.navigate('PostDetail', { postId: item.id, initialLiked: likedIds.has(item.id), initialSaved: savedIds.has(item.id) })}
-            currentUsername={currentUsername}
-          />
-        )}
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-      />
+      {feedList}
       <SharedSidebar extraTopOffset={10} />
     </View>
   );
