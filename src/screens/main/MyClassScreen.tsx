@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   ActivityIndicator,
   Alert,
   FlatList,
@@ -18,15 +19,27 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { classeService } from '../../services/classeService';
+import { adminService } from '../../services/adminService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme, ThemeColors } from '../../context/ThemeContext';
 import {
+  ClasseCorsoDto,
   IscrizioneClasseDto,
   AnnuncioDto,
   CommentoAnnuncioDto,
   MaterialeClasseDto,
   CompitoDto,
 } from '../../types';
+
+function toIscrizione(c: ClasseCorsoDto): IscrizioneClasseDto {
+  return {
+    id: c.id,
+    classeId: c.id,
+    classeNome: c.nome,
+    professoreNome: c.professoreNome,
+    stato: 'APPROVATA',
+  };
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -159,7 +172,7 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     borderTopWidth: 1, borderTopColor: C.border,
   },
   commentiToggleText: { fontSize: 12, color: C.textSoft },
-  commentiSection: { backgroundColor: C.bgAlt ?? C.bg, paddingHorizontal: 14, paddingTop: 8 },
+  commentiSection: { backgroundColor: C.bg, paddingHorizontal: 14, paddingTop: 8 },
   commentoRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   commentoInfo: { flex: 1 },
   commentoAutore: { fontSize: 12, fontWeight: '700', color: C.text },
@@ -255,6 +268,110 @@ function AvatarCircle({ name, size = 40 }: { name?: string; size?: number }) {
   );
 }
 
+// ─── Skeleton screens ────────────────────────────────────────────────────────
+
+function useSkeletonOpacity(): Animated.Value {
+  const opacity = useRef(new Animated.Value(0.45)).current;
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.9, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.45, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+  return opacity;
+}
+
+function StudentiSkeleton() {
+  const { colors: C } = useTheme();
+  const S = makeStyles(C);
+  const opacity = useSkeletonOpacity();
+  return (
+    <Animated.View style={[S.listContent, { opacity }]}>
+      {[0, 1, 2, 3, 4].map(i => (
+        <View key={i} style={[S.studentCard, { marginBottom: 8 }]}>
+          <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: C.border }} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <View style={{ height: 13, width: '55%', borderRadius: 6, backgroundColor: C.border }} />
+            <View style={{ height: 11, width: '35%', borderRadius: 5, backgroundColor: C.border }} />
+          </View>
+          <View style={{ height: 24, width: 64, borderRadius: 12, backgroundColor: C.border }} />
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
+function MaterialiSkeleton() {
+  const { colors: C } = useTheme();
+  const S = makeStyles(C);
+  const opacity = useSkeletonOpacity();
+  return (
+    <Animated.View style={[S.listContent, { opacity }]}>
+      {[0, 1, 2, 3, 4].map(i => (
+        <View key={i} style={S.materialeCard}>
+          <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: C.border }} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <View style={{ height: 13, width: '65%', borderRadius: 6, backgroundColor: C.border }} />
+            <View style={{ height: 11, width: '40%', borderRadius: 5, backgroundColor: C.border }} />
+          </View>
+          <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: C.border }} />
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
+function CompitiSkeleton() {
+  const { colors: C } = useTheme();
+  const S = makeStyles(C);
+  const opacity = useSkeletonOpacity();
+  return (
+    <Animated.View style={[S.listContent, { opacity }]}>
+      {[0, 1, 2].map(i => (
+        <View key={i} style={S.compitoCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: C.border }} />
+            <View style={{ flex: 1, height: 13, borderRadius: 6, backgroundColor: C.border }} />
+            <View style={{ width: 72, height: 22, borderRadius: 11, backgroundColor: C.border }} />
+          </View>
+          <View style={{ height: 11, width: '80%', borderRadius: 5, backgroundColor: C.border, marginBottom: 6 }} />
+          <View style={{ height: 11, width: '55%', borderRadius: 5, backgroundColor: C.border }} />
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
+function AnnunciSkeleton() {
+  const { colors: C } = useTheme();
+  const S = makeStyles(C);
+  const opacity = useSkeletonOpacity();
+  return (
+    <Animated.View style={[S.listContent, { opacity }]}>
+      {[0, 1, 2].map(i => (
+        <View key={i} style={[S.annuncioCard, { marginBottom: 10 }]}>
+          <View style={S.annuncioHeader}>
+            <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: C.border }} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <View style={{ height: 13, width: '70%', borderRadius: 6, backgroundColor: C.border }} />
+              <View style={{ height: 11, width: '45%', borderRadius: 5, backgroundColor: C.border }} />
+            </View>
+            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: C.border }} />
+          </View>
+          <View style={S.commentiToggle}>
+            <View style={{ width: 15, height: 15, borderRadius: 8, backgroundColor: C.border }} />
+            <View style={{ height: 11, width: 80, borderRadius: 5, backgroundColor: C.border }} />
+          </View>
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
 // ─── StudentiTab ──────────────────────────────────────────────────────────────
 
 function StudentiTab({ classeId }: { classeId: number }) {
@@ -262,12 +379,23 @@ function StudentiTab({ classeId }: { classeId: number }) {
   const S = makeStyles(C);
   const [studenti, setStudenti] = useState<IscrizioneClasseDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errore, setErrore] = useState<string | null>(null);
 
   useEffect(() => {
-    classeService.studentiClasse(classeId).then(d => setStudenti(d)).catch(() => {}).finally(() => setLoading(false));
+    classeService.studentiClasse(classeId)
+      .then(d => setStudenti(d))
+      .catch(() => setErrore('Impossibile caricare gli studenti.'))
+      .finally(() => setLoading(false));
   }, [classeId]);
 
-  if (loading) return <View style={S.centered}><ActivityIndicator color={C.primary} /></View>;
+  if (loading) return <StudentiSkeleton />;
+  if (errore) return (
+    <View style={S.emptyState}>
+      <MaterialCommunityIcons name="cloud-off-outline" size={48} color={C.danger} />
+      <Text style={[S.emptyTitle, { color: C.danger }]}>Errore di caricamento</Text>
+      <Text style={S.emptySubtitle}>{errore}</Text>
+    </View>
+  );
   if (studenti.length === 0) return (
     <View style={S.emptyState}>
       <MaterialCommunityIcons name="account-group-outline" size={48} color={C.textMuted} />
@@ -305,12 +433,23 @@ function MaterialiTab({ classeId }: { classeId: number }) {
   const S = makeStyles(C);
   const [materiali, setMateriali] = useState<MaterialeClasseDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errore, setErrore] = useState<string | null>(null);
 
   useEffect(() => {
-    classeService.materiali(classeId).then(d => setMateriali(d)).catch(() => {}).finally(() => setLoading(false));
+    classeService.materiali(classeId)
+      .then(d => setMateriali(d))
+      .catch(() => setErrore('Impossibile caricare i materiali.'))
+      .finally(() => setLoading(false));
   }, [classeId]);
 
-  if (loading) return <View style={S.centered}><ActivityIndicator color={C.primary} /></View>;
+  if (loading) return <MaterialiSkeleton />;
+  if (errore) return (
+    <View style={S.emptyState}>
+      <MaterialCommunityIcons name="cloud-off-outline" size={48} color={C.danger} />
+      <Text style={[S.emptyTitle, { color: C.danger }]}>Errore di caricamento</Text>
+      <Text style={S.emptySubtitle}>{errore}</Text>
+    </View>
+  );
   if (materiali.length === 0) return (
     <View style={S.emptyState}>
       <MaterialCommunityIcons name="folder-open-outline" size={48} color={C.textMuted} />
@@ -343,12 +482,23 @@ function CompitiTab({ classeId }: { classeId: number }) {
   const S = makeStyles(C);
   const [compiti, setCompiti] = useState<CompitoDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errore, setErrore] = useState<string | null>(null);
 
   useEffect(() => {
-    classeService.compiti(classeId).then(d => setCompiti(d)).catch(() => {}).finally(() => setLoading(false));
+    classeService.compiti(classeId)
+      .then(d => setCompiti(d))
+      .catch(() => setErrore('Impossibile caricare i compiti.'))
+      .finally(() => setLoading(false));
   }, [classeId]);
 
-  if (loading) return <View style={S.centered}><ActivityIndicator color={C.primary} /></View>;
+  if (loading) return <CompitiSkeleton />;
+  if (errore) return (
+    <View style={S.emptyState}>
+      <MaterialCommunityIcons name="cloud-off-outline" size={48} color={C.danger} />
+      <Text style={[S.emptyTitle, { color: C.danger }]}>Errore di caricamento</Text>
+      <Text style={S.emptySubtitle}>{errore}</Text>
+    </View>
+  );
   if (compiti.length === 0) return (
     <View style={S.emptyState}>
       <MaterialCommunityIcons name="clipboard-text-outline" size={48} color={C.textMuted} />
@@ -393,6 +543,7 @@ function AnnuncioItem({
   const [showCommenti, setShowCommenti] = useState(false);
   const [commenti, setCommenti] = useState<CommentoAnnuncioDto[]>([]);
   const [loadingCommenti, setLoadingCommenti] = useState(false);
+  const [erroreCommenti, setErroreCommenti] = useState<string | null>(null);
   const [commentoText, setCommentoText] = useState('');
   const [sending, setSending] = useState(false);
   const inputRef = useRef<TextInput>(null);
@@ -400,10 +551,13 @@ function AnnuncioItem({
   async function toggleCommenti() {
     if (!showCommenti && commenti.length === 0) {
       setLoadingCommenti(true);
+      setErroreCommenti(null);
       try {
         const data = await classeService.commentiAnnuncio(classeId, annuncio.id);
         setCommenti(data);
-      } catch {}
+      } catch {
+        setErroreCommenti('Impossibile caricare i commenti.');
+      }
       setLoadingCommenti(false);
     }
     setShowCommenti(v => !v);
@@ -416,7 +570,9 @@ function AnnuncioItem({
       const c = await classeService.aggiungiCommento(classeId, annuncio.id, commentoText.trim());
       setCommenti(prev => [...prev, c]);
       setCommentoText('');
-    } catch {}
+    } catch {
+      Alert.alert('Errore', 'Impossibile inviare il commento. Riprova.');
+    }
     setSending(false);
   }
 
@@ -424,7 +580,9 @@ function AnnuncioItem({
     try {
       await classeService.eliminaCommento(classeId, annuncio.id, id);
       setCommenti(prev => prev.filter(c => c.id !== id));
-    } catch {}
+    } catch {
+      Alert.alert('Errore', 'Impossibile eliminare il commento. Riprova.');
+    }
   }
 
   return (
@@ -461,9 +619,11 @@ function AnnuncioItem({
         <View style={S.commentiSection}>
           {loadingCommenti
             ? <ActivityIndicator size="small" color={C.primary} style={{ marginVertical: 8 }} />
-            : commenti.length === 0
-              ? <Text style={[S.commentoTime, { marginBottom: 8 }]}>Nessun commento ancora.</Text>
-              : commenti.map(c => (
+            : erroreCommenti
+              ? <Text style={[S.commentoTime, { marginBottom: 8, color: C.danger }]}>{erroreCommenti}</Text>
+              : commenti.length === 0
+                ? <Text style={[S.commentoTime, { marginBottom: 8 }]}>Nessun commento ancora.</Text>
+                : commenti.map(c => (
                 <TouchableOpacity
                   key={c.id}
                   style={S.commentoRow}
@@ -518,12 +678,23 @@ function AnnunciTab({ classeId, currentUsername }: { classeId: number; currentUs
   const S = makeStyles(C);
   const [annunci, setAnnunci] = useState<AnnuncioDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errore, setErrore] = useState<string | null>(null);
 
   useEffect(() => {
-    classeService.annunci(classeId).then(d => setAnnunci(d)).catch(() => {}).finally(() => setLoading(false));
+    classeService.annunci(classeId)
+      .then(d => setAnnunci(d))
+      .catch(() => setErrore('Impossibile caricare gli annunci.'))
+      .finally(() => setLoading(false));
   }, [classeId]);
 
-  if (loading) return <View style={S.centered}><ActivityIndicator color={C.primary} /></View>;
+  if (loading) return <AnnunciSkeleton />;
+  if (errore) return (
+    <View style={S.emptyState}>
+      <MaterialCommunityIcons name="cloud-off-outline" size={48} color={C.danger} />
+      <Text style={[S.emptyTitle, { color: C.danger }]}>Errore di caricamento</Text>
+      <Text style={S.emptySubtitle}>{errore}</Text>
+    </View>
+  );
   if (annunci.length === 0) return (
     <View style={S.emptyState}>
       <MaterialCommunityIcons name="bullhorn-outline" size={48} color={C.textMuted} />
@@ -700,9 +871,21 @@ export default function MyClassScreen() {
   const [error, setError]           = useState('');
 
   async function loadIscrizioni() {
+    const aliases = user?.ruoli?.map(r => r.alias) ?? [];
+    const isAdmin      = aliases.includes('ADMIN');
+    const isProfessore = aliases.includes('PROFESSORE');
+
     try {
-      const data = await classeService.miIscrizioni();
-      setIscrizioni(Array.isArray(data) ? data : []);
+      if (isAdmin) {
+        const data = await adminService.getClassi();
+        setIscrizioni(Array.isArray(data) ? data.map(toIscrizione) : []);
+      } else if (isProfessore) {
+        const data = await classeService.mieClassi();
+        setIscrizioni(Array.isArray(data) ? data.map(toIscrizione) : []);
+      } else {
+        const data = await classeService.miIscrizioni();
+        setIscrizioni(Array.isArray(data) ? data : []);
+      }
       setError('');
     } catch {
       setError('Impossibile caricare le classi.');

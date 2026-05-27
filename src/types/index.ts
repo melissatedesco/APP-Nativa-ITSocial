@@ -256,6 +256,7 @@ export interface IstitutoDto {
   nome: string;
   descrizione?: string;
   citta?: string;
+  url?: string;
   numeroClassi: number;
   createdAt?: string;
 }

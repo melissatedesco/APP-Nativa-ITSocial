@@ -5,6 +5,7 @@ import { Post } from '../types';
 import { postService } from '../services/postService';
 import { likeService } from '../services/likeService';
 import { salvataggioService } from '../services/salvataggioService';
+import { withRetry } from '../utils/withRetry';
 
 export type FeedTab = 'pertе' | 'seguiti' | 'tendenze';
 
@@ -13,7 +14,7 @@ const PAGE_SIZE = 20;
 // Cache module-level: sopravvive ai remount, usata come fallback offline
 const feedCache = new Map<FeedTab, Post[]>();
 
-function parsePostError(err: unknown): string {
+export function parsePostError(err: unknown): string {
   if (axios.isAxiosError(err)) {
     if (!err.response) return 'Impossibile raggiungere il server. Controlla la connessione.';
     const status = err.response.status;
@@ -72,14 +73,13 @@ export function useFeed(): UseFeedReturn {
     }
 
     try {
+      const fetchFn = (): Promise<Post[]> => {
+        if (currentTab === 'seguiti') return postService.getFeedSeguiti(pg, PAGE_SIZE);
+        if (currentTab === 'tendenze') return postService.getTrending(pg, PAGE_SIZE);
+        return postService.getFeed(pg, PAGE_SIZE);
+      };
       let data: Post[];
-      if (currentTab === 'seguiti') {
-        data = await postService.getFeedSeguiti(pg, PAGE_SIZE);
-      } else if (currentTab === 'tendenze') {
-        data = await postService.getTrending(pg, PAGE_SIZE);
-      } else {
-        data = await postService.getFeed(pg, PAGE_SIZE);
-      }
+      data = await withRetry(fetchFn);
       const arr = Array.isArray(data) ? data : [];
       if (append) {
         setPosts(prev => {

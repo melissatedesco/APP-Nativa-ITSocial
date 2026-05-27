@@ -101,10 +101,10 @@ export function WebRightPanel() {
   const navigation = useNavigation<Nav>();
   const { user } = useAuth();
 
-  const nome = (user as any)?.nome ?? (user as any)?.username ?? '?';
-  const cognome = (user as any)?.cognome ?? '';
-  const username = (user as any)?.username ?? '';
-  const ruoloNome = (user as any)?.ruolo?.nome ?? '';
+  const nome = user?.nome ?? user?.username ?? '?';
+  const cognome = user?.cognome ?? '';
+  const username = user?.username ?? '';
+  const ruoloNome = user?.ruoli?.[0]?.nome ?? '';
   const ruoloTag = getRuoloBadge(ruoloNome);
   const letter = nome[0].toUpperCase();
 

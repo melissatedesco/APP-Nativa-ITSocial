@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
@@ -9,6 +9,21 @@ import { UserProvider } from './src/context/UserContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotifPrefsProvider } from './src/context/NotifPrefsContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { initErrorReporting, captureException } from './src/utils/errorReporting';
+
+initErrorReporting();
+
+// On web, capture unhandled promise rejections.
+// On native, @sentry/react-native hooks into the JS runtime automatically on init.
+if (Platform.OS === 'web' && typeof globalThis !== 'undefined') {
+  (globalThis as typeof globalThis & { addEventListener?: Function }).addEventListener?.(
+    'unhandledrejection',
+    (event: PromiseRejectionEvent) => {
+      captureException(event.reason, { type: 'unhandledrejection' });
+    },
+  );
+}
 
 function ThemedApp() {
   const { isDark } = useTheme();
@@ -45,9 +60,11 @@ export default function App() {
   console.log('[App] componente montato');
   return (
     <GestureHandlerRootView style={styles.root}>
-      <ThemeProvider>
-        <ThemedApp />
-      </ThemeProvider>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <ThemedApp />
+        </ThemeProvider>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }
