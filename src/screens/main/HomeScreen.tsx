@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -258,6 +258,8 @@ function CommentsSection({ postId, initialComments, currentUsername }: {
           style={styles.commentRow}
           onLongPress={() => handleDelete(c.idCommento, c.utente?.username ?? '')}
           activeOpacity={0.85}
+          accessibilityLabel={`Commento di ${c.utente?.username ?? 'utente'}: ${c.testo}`}
+          accessibilityHint={c.utente?.username === currentUsername ? 'Tieni premuto per eliminare' : undefined}
         >
           <View style={styles.commentAvatar}>
             <Text style={styles.commentAvatarText}>{(c.utente?.username ?? '?')[0].toUpperCase()}</Text>
@@ -283,6 +285,9 @@ function CommentsSection({ postId, initialComments, currentUsername }: {
           style={[styles.commentSendBtn, (!newText.trim() || adding) && styles.commentSendBtnDisabled]}
           onPress={handleAdd}
           disabled={!newText.trim() || adding}
+          accessibilityRole="button"
+          accessibilityLabel="Invia commento"
+          accessibilityState={{ disabled: !newText.trim() || adding }}
         >
           {adding
             ? <ActivityIndicator size="small" color="#fff" />
@@ -378,6 +383,9 @@ function PollSection({ initialSondaggio }: { initialSondaggio: SondaggioDto }) {
               onPress={() => handleVote(opzione.idOpzione)}
               disabled={voting}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Vota "${opzione.testo}"`}
+              accessibilityState={{ disabled: voting }}
             >
               {isThisVoting
                 ? <ActivityIndicator size="small" color={C.primary} />
@@ -403,8 +411,52 @@ function PollSection({ initialSondaggio }: { initialSondaggio: SondaggioDto }) {
   );
 }
 
+// ─── PostSkeleton ────────────────────────────────────────────────────────────
+
+function usePostSkeletonOpacity(): Animated.Value {
+  const opacity = useRef(new Animated.Value(0.45)).current;
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.9, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.45, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+  return opacity;
+}
+
+function PostSkeleton() {
+  const { colors: C } = useTheme();
+  const S = useMemo(() => makeStyles(C), [C]);
+  const opacity = usePostSkeletonOpacity();
+  return (
+    <Animated.View style={[S.postCard, { opacity }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <View style={[S.postHeader, { paddingBottom: 14 }]}>
+        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.border }} />
+        <View style={{ flex: 1, gap: 6 }}>
+          <View style={{ height: 13, width: '50%', borderRadius: 6, backgroundColor: C.border }} />
+          <View style={{ height: 11, width: '32%', borderRadius: 5, backgroundColor: C.border }} />
+        </View>
+      </View>
+      <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 8 }}>
+        <View style={{ height: 13, width: '90%', borderRadius: 5, backgroundColor: C.border }} />
+        <View style={{ height: 13, width: '78%', borderRadius: 5, backgroundColor: C.border }} />
+        <View style={{ height: 13, width: '60%', borderRadius: 5, backgroundColor: C.border }} />
+      </View>
+      <View style={[S.postActions, { marginTop: 0 }]}>
+        <View style={{ height: 26, width: 56, borderRadius: 13, backgroundColor: C.border }} />
+        <View style={{ height: 26, width: 68, borderRadius: 13, backgroundColor: C.border }} />
+        <View style={{ height: 26, width: 60, borderRadius: 13, backgroundColor: C.border }} />
+      </View>
+    </Animated.View>
+  );
+}
+
 // ─── PostCard ─────────────────────────────────────────────────────────────────
-function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor, onPressDetail, currentUsername }: {
+const PostCard = React.memo(function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor, onPressDetail, currentUsername }: {
   post: Post;
   liked: boolean;
   saved: boolean;
@@ -416,7 +468,7 @@ function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor,
   currentUsername: string;
 }) {
   const { colors: C } = useTheme();
-  const styles = makeStyles(C);
+  const styles = useMemo(() => makeStyles(C), [C]);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const ruoloTag = getRuoloBadge(post.ruoloUtente);
   const isOwn = post.usernameUtente === currentUsername;
@@ -442,7 +494,7 @@ function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor,
 
   return (
     <View style={styles.postCard}>
-      <TouchableOpacity style={styles.postHeader} onPress={() => onPressAuthor(post.usernameUtente)} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.postHeader} onPress={() => onPressAuthor(post.usernameUtente)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Profilo di ${post.nomeUtente ?? 'Utente'}`}>
         <Avatar name={post.nomeUtente} size={44} />
         <View style={styles.postHeaderInfo}>
           <View style={styles.postHeaderRow}>
@@ -456,7 +508,7 @@ function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor,
           <Text style={styles.postMeta}>@{post.usernameUtente}{'  ·  '}{timeAgo(post.dataOra)}</Text>
         </View>
         {isOwn && (
-          <TouchableOpacity style={styles.deletePostBtn} onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity style={styles.deletePostBtn} onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Elimina post">
             <MaterialCommunityIcons name="close" size={18} color={C.textMuted} />
           </TouchableOpacity>
         )}
@@ -492,19 +544,19 @@ function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor,
       {post.sondaggio && <PollSection initialSondaggio={post.sondaggio} />}
 
       <View style={styles.postActions}>
-        <TouchableOpacity style={styles.actionBtn} onPress={handleLike} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.actionBtn} onPress={handleLike} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={liked ? `Rimuovi preferito, ${post.numeroLike ?? 0}` : `Aggiungi ai preferiti, ${post.numeroLike ?? 0}`} accessibilityState={{ selected: liked }}>
           <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
             <MaterialCommunityIcons name={liked ? 'star' : 'star-outline'} size={19} color={liked ? C.warm : C.textSoft} />
           </Animated.View>
           <Text style={[styles.actionCount, liked && styles.actionCountLiked]}>{post.numeroLike ?? 0}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtn} onPress={onPressDetail} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.actionBtn} onPress={onPressDetail} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Commenti, ${post.numeroCommenti ?? post.commenti?.length ?? 0}`}>
           <MaterialCommunityIcons name="comment-outline" size={19} color={C.textSoft} />
           <Text style={styles.actionCount}>{post.numeroCommenti ?? post.commenti?.length ?? 0}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionBtn, saved && styles.actionBtnSaved]} onPress={() => onSave(post.id)} activeOpacity={0.7}>
+        <TouchableOpacity style={[styles.actionBtn, saved && styles.actionBtnSaved]} onPress={() => onSave(post.id)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={saved ? 'Rimuovi dai salvati' : 'Salva post'} accessibilityState={{ selected: saved }}>
           <MaterialCommunityIcons name={saved ? 'bookmark' : 'bookmark-outline'} size={19} color={saved ? C.primary : C.textSoft} />
           <Text style={[styles.actionCount, saved && styles.actionCountSaved]}>{saved ? 'Salvato' : 'Salva'}</Text>
         </TouchableOpacity>
@@ -512,7 +564,11 @@ function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor,
 
     </View>
   );
-}
+}, (prev, next) =>
+  prev.post === next.post &&
+  prev.liked === next.liked &&
+  prev.saved === next.saved
+);
 
 // ─── Composer ─────────────────────────────────────────────────────────────────
 function Composer({ username, onPublish }: { username: string; onPublish: (text: string, imageUris?: string[]) => Promise<void> }) {
@@ -545,7 +601,7 @@ function Composer({ username, onPublish }: { username: string; onPublish: (text:
     <View style={styles.composer}>
       <Avatar name={username} size={40} />
       {!open ? (
-        <TouchableOpacity style={styles.composerFakeInput} onPress={() => setOpen(true)} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.composerFakeInput} onPress={() => setOpen(true)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Scrivi un nuovo post">
           <Text style={styles.composerPlaceholder}>A cosa stai pensando?</Text>
         </TouchableOpacity>
       ) : (
@@ -574,16 +630,16 @@ function Composer({ username, onPublish }: { username: string; onPublish: (text:
           )}
           <View style={styles.composerFooter}>
             <View style={styles.composerLeft}>
-              <TouchableOpacity style={[styles.attachBtn, images.length >= 5 && styles.attachBtnDisabled]} onPress={pickImages} disabled={images.length >= 5}>
+              <TouchableOpacity style={[styles.attachBtn, images.length >= 5 && styles.attachBtnDisabled]} onPress={pickImages} disabled={images.length >= 5} accessibilityRole="button" accessibilityLabel={images.length > 0 ? `Allega foto (${images.length} di 5 selezionate)` : 'Allega foto'} accessibilityState={{ disabled: images.length >= 5 }}>
                 <Text style={styles.attachBtnText}>📷 {images.length > 0 ? `${images.length}/5` : 'Foto'}</Text>
               </TouchableOpacity>
               <Text style={styles.composerCounter}>{text.length}/500</Text>
             </View>
             <View style={styles.composerActions}>
-              <TouchableOpacity style={styles.composerCancel} onPress={() => { setOpen(false); setText(''); setImages([]); }}>
+              <TouchableOpacity style={styles.composerCancel} onPress={() => { setOpen(false); setText(''); setImages([]); }} accessibilityRole="button" accessibilityLabel="Annulla post">
                 <Text style={styles.composerCancelText}>Annulla</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.composerPublish, !canPublish && styles.composerPublishDisabled]} onPress={handlePublish} disabled={!canPublish}>
+              <TouchableOpacity style={[styles.composerPublish, !canPublish && styles.composerPublishDisabled]} onPress={handlePublish} disabled={!canPublish} accessibilityRole="button" accessibilityLabel="Pubblica post" accessibilityState={{ disabled: !canPublish }}>
                 {publishing ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.composerPublishText}>Pubblica</Text>}
               </TouchableOpacity>
             </View>
@@ -599,7 +655,13 @@ function SmarTinaBanner({ onPress }: { onPress: () => void }) {
   const { colors: C } = useTheme();
   const styles = makeStyles(C);
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.smartinaBannerWrap}>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.9}
+      style={styles.smartinaBannerWrap}
+      accessibilityRole="button"
+      accessibilityLabel="Chatta con SmarTina, l'assistente AI"
+    >
       <LinearGradient
         colors={['#2B5BA8', '#0f2545']}
         start={{ x: 0, y: 0 }}
@@ -646,7 +708,15 @@ export default function HomeScreen() {
       {!isWeb && <SmarTinaBanner onPress={() => navigation.navigate('SmartinaChat')} />}
       <View style={styles.tabBar}>
         {(['pertе', 'seguiti', 'tendenze'] as FeedTab[]).map((t) => (
-          <TouchableOpacity key={t} style={[styles.tabBtn, tab === t && styles.tabBtnActive]} onPress={() => changeTab(t)} activeOpacity={0.8}>
+          <TouchableOpacity
+            key={t}
+            style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
+            onPress={() => changeTab(t)}
+            activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityLabel={t === 'pertе' ? 'Per te' : t === 'seguiti' ? 'Seguiti' : 'Tendenze'}
+            accessibilityState={{ selected: tab === t }}
+          >
             <Text style={[styles.tabBtnText, tab === t && styles.tabBtnTextActive]}>
               {t === 'pertе' ? 'Per te' : t === 'seguiti' ? 'Seguiti' : '🔥 Tendenze'}
             </Text>
@@ -657,14 +727,27 @@ export default function HomeScreen() {
         <Composer username={currentUsername} onPublish={publishPost} />
       </KeyboardAvoidingView>
       {publishError && <View style={styles.errorBanner}><Text style={styles.errorBannerText}>{publishError}</Text></View>}
-      {feedError && !isLoading && posts.length > 0 && <View style={styles.errorBanner}><Text style={styles.errorBannerText}>⚠️ {feedError}</Text></View>}
-      {isLoading && <View style={styles.feedLoading}><ActivityIndicator color={C.primary} /></View>}
+      {feedError && posts.length > 0 && <View style={styles.errorBanner}><Text style={styles.errorBannerText}>⚠️ {feedError}</Text></View>}
     </View>
   );
 
+  const renderPost = useCallback(({ item }: { item: Post }) => (
+    <PostCard
+      post={item}
+      liked={likedIds.has(item.id)}
+      saved={savedIds.has(item.id)}
+      onLike={toggleLike}
+      onSave={toggleSave}
+      onDelete={deletePost}
+      onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
+      onPressDetail={() => navigation.navigate('PostDetail', { postId: item.id, initialLiked: likedIds.has(item.id), initialSaved: savedIds.has(item.id) })}
+      currentUsername={currentUsername}
+    />
+  ), [likedIds, savedIds, toggleLike, toggleSave, deletePost, currentUsername, navigation]);
+
   const feedList = (
     <FlatList
-      data={isLoading ? [] : posts}
+      data={posts}
       keyExtractor={(item) => String(item.id)}
       style={styles.page}
       contentContainerStyle={[styles.listContent, isWeb && { paddingHorizontal: 0 }]}
@@ -672,42 +755,36 @@ export default function HomeScreen() {
       ListHeaderComponent={ListHeader}
       onEndReached={loadMore}
       onEndReachedThreshold={0.4}
+      removeClippedSubviews={Platform.OS !== 'web'}
+      maxToRenderPerBatch={5}
+      windowSize={5}
+      initialNumToRender={5}
       ListEmptyComponent={
-        !isLoading ? (
-          feedError ? (
-            <View style={styles.errorState}>
-              <Text style={styles.errorStateEmoji}>😕</Text>
-              <Text style={styles.errorStateTitle}>Impossibile caricare il feed</Text>
-              <Text style={styles.errorStateMessage}>{feedError}</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={refresh} activeOpacity={0.8}>
-                <Text style={styles.retryBtnText}>Riprova</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📭</Text>
-              <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
-              <Text style={styles.emptySubtitle}>
-                {tab === 'seguiti' ? 'Segui altri utenti per vedere i loro post.' : tab === 'tendenze' ? 'Non ci sono post in tendenza.' : 'Sii il primo a pubblicare qualcosa!'}
-              </Text>
-            </View>
-          )
-        ) : null
+        isLoading ? (
+          <View style={{ gap: 10 }}>
+            {[0, 1, 2, 3].map(i => <PostSkeleton key={i} />)}
+          </View>
+        ) : feedError ? (
+          <View style={styles.errorState}>
+            <Text style={styles.errorStateEmoji}>😕</Text>
+            <Text style={styles.errorStateTitle}>Impossibile caricare il feed</Text>
+            <Text style={styles.errorStateMessage}>{feedError}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={refresh} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Riprova a caricare il feed">
+              <Text style={styles.retryBtnText}>Riprova</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>📭</Text>
+            <Text style={styles.emptyTitle}>Nessun post nel feed</Text>
+            <Text style={styles.emptySubtitle}>
+              {tab === 'seguiti' ? 'Segui altri utenti per vedere i loro post.' : tab === 'tendenze' ? 'Non ci sono post in tendenza.' : 'Sii il primo a pubblicare qualcosa!'}
+            </Text>
+          </View>
+        )
       }
       ListFooterComponent={isLoadingMore ? <View style={styles.loadingMore}><ActivityIndicator color={C.primary} size="small" /></View> : null}
-      renderItem={({ item }) => (
-        <PostCard
-          post={item}
-          liked={likedIds.has(item.id)}
-          saved={savedIds.has(item.id)}
-          onLike={toggleLike}
-          onSave={toggleSave}
-          onDelete={deletePost}
-          onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
-          onPressDetail={() => navigation.navigate('PostDetail', { postId: item.id, initialLiked: likedIds.has(item.id), initialSaved: savedIds.has(item.id) })}
-          currentUsername={currentUsername}
-        />
-      )}
+      renderItem={renderPost}
       ItemSeparatorComponent={() => <View style={{ height: isWeb ? 12 : 10 }} />}
     />
   );

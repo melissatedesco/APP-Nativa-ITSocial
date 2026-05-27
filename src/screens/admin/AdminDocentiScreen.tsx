@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, ActivityIndicator,
-  RefreshControl, TouchableOpacity,
+  Alert, RefreshControl, TouchableOpacity,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme, ThemeColors } from '../../context/ThemeContext';
@@ -22,6 +22,8 @@ type DocenteForm = {
 };
 
 const EMPTY_FORM: DocenteForm = { nome: '', cognome: '', email: '', username: '', password: '' };
+
+type FormErrors = Partial<Record<keyof DocenteForm, string>>;
 
 const AVATAR_COLORS = ['#6366F1', '#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 function avatarColor(name: string) {
@@ -65,20 +67,23 @@ export default function AdminDocentiScreen() {
   const [editTarget, setEditTarget] = useState<any>(null);
   const [form, setForm] = useState<DocenteForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   function openCreate() {
     setForm(EMPTY_FORM);
     setEditTarget(null);
+    setErrors({});
     setModalMode('create');
   }
 
   function openEdit(item: any) {
     setForm({ nome: item.nome ?? '', cognome: item.cognome ?? '', email: item.email ?? '', username: item.username ?? '', password: '' });
     setEditTarget(item);
+    setErrors({});
     setModalMode('edit');
   }
 
-  function closeModal() { setModalMode(null); setEditTarget(null); }
+  function closeModal() { setModalMode(null); setEditTarget(null); setErrors({}); }
 
   function handleDelete(item: any) {
     confirmDelete(
@@ -94,12 +99,23 @@ export default function AdminDocentiScreen() {
 
   async function handleSave() {
     const { nome, cognome, email, username, password } = form;
-    if (!nome.trim() || !cognome.trim() || !email.trim()) {
-      return;
+    const newErrors: FormErrors = {};
+    if (!nome.trim()) newErrors.nome = 'Il nome è obbligatorio.';
+    if (!cognome.trim()) newErrors.cognome = 'Il cognome è obbligatorio.';
+    if (!email.trim()) {
+      newErrors.email = 'L\'email è obbligatoria.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = 'Inserisci un\'email valida.';
     }
-    if (modalMode === 'create' && (!username.trim() || !password.trim())) {
-      return;
+    if (modalMode === 'create') {
+      if (!username.trim()) newErrors.username = 'L\'username è obbligatorio.';
+      if (!password.trim()) {
+        newErrors.password = 'La password è obbligatoria.';
+      } else if (password.length < 8) {
+        newErrors.password = 'Minimo 8 caratteri.';
+      }
     }
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
     setSaving(true);
     try {
       if (modalMode === 'create') {
@@ -113,7 +129,7 @@ export default function AdminDocentiScreen() {
       }
       closeModal();
     } catch {
-      // Error handled by FormModal staying open
+      Alert.alert('Errore', 'Impossibile salvare il docente. Controlla i dati e riprova.');
     } finally {
       setSaving(false);
     }
@@ -166,16 +182,17 @@ export default function AdminDocentiScreen() {
         submitLabel={modalMode === 'create' ? 'Crea docente' : 'Salva modifiche'}
       >
         <View style={styles.row2}>
-          <Field label="Nome *" placeholder="Mario" value={form.nome} onChangeText={v => setForm(p => ({ ...p, nome: v }))} style={{ flex: 1 }} />
-          <Field label="Cognome *" placeholder="Rossi" value={form.cognome} onChangeText={v => setForm(p => ({ ...p, cognome: v }))} style={{ flex: 1 }} />
+          <Field label="Nome *" placeholder="Mario" value={form.nome} onChangeText={v => { setForm(p => ({ ...p, nome: v })); setErrors(p => ({ ...p, nome: undefined })); }} error={errors.nome} style={{ flex: 1 }} />
+          <Field label="Cognome *" placeholder="Rossi" value={form.cognome} onChangeText={v => { setForm(p => ({ ...p, cognome: v })); setErrors(p => ({ ...p, cognome: undefined })); }} error={errors.cognome} style={{ flex: 1 }} />
         </View>
-        <Field label="Email *" placeholder="mario.rossi@its.it" value={form.email} onChangeText={v => setForm(p => ({ ...p, email: v }))} keyboardType="email-address" autoCapitalize="none" />
-        <Field label="Username *" placeholder="mario.rossi" value={form.username} onChangeText={v => setForm(p => ({ ...p, username: v }))} autoCapitalize="none" />
+        <Field label="Email *" placeholder="mario.rossi@its.it" value={form.email} onChangeText={v => { setForm(p => ({ ...p, email: v })); setErrors(p => ({ ...p, email: undefined })); }} error={errors.email} keyboardType="email-address" autoCapitalize="none" />
+        <Field label="Username *" placeholder="mario.rossi" value={form.username} onChangeText={v => { setForm(p => ({ ...p, username: v })); setErrors(p => ({ ...p, username: undefined })); }} error={errors.username} autoCapitalize="none" />
         <Field
           label={modalMode === 'edit' ? 'Nuova password (opzionale)' : 'Password *'}
           placeholder="Min. 8 caratteri"
           value={form.password}
-          onChangeText={v => setForm(p => ({ ...p, password: v }))}
+          onChangeText={v => { setForm(p => ({ ...p, password: v })); setErrors(p => ({ ...p, password: undefined })); }}
+          error={errors.password}
           secureTextEntry
           autoCapitalize="none"
         />

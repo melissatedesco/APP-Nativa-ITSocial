@@ -28,7 +28,7 @@ export const lightColors: ThemeColors = {
   border:     '#d8e1eb',   // c-ink-200  oklch(88% .010 250)
   text:       '#1a2535',   // c-ink-900  oklch(22% .060 250)
   textSoft:   '#617585',   // c-ink-500  oklch(52% .030 250)
-  textMuted:  '#8c9eb0',   // c-ink-400  oklch(65% .020 250)
+  textMuted:  '#607282',   // c-ink-400  ~5.0:1 on white (was #8c9eb0, 2.6:1 — WCAG AA fail)
   primary:    '#4A8FD4',   // c-brand-500 oklch(60% .12 220)
   primaryDark:'#3d7fc0',   // c-brand-600 oklch(52% .12 220)
   brand:      '#2B5BA8',   // c-brand-700 oklch(44% .11 225)
@@ -46,7 +46,7 @@ export const darkColors: ThemeColors = {
   border:     '#4d6d8d',
   text:       '#e4ecf7',
   textSoft:   '#a0bdd4',
-  textMuted:  '#6e8fa8',
+  textMuted:  '#b0cce0',   // lightened from #6e8fa8 (~2.3:1) to ~4.9:1 on dark card
   primary:    '#5b9fd4',
   primaryDark:'#4A8FD4',
   brand:      '#2B5BA8',

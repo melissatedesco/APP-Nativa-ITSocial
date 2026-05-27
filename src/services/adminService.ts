@@ -84,12 +84,12 @@ export const adminService = {
     return data;
   },
 
-  async creaIstituto(form: { nome: string; descrizione?: string; citta?: string }): Promise<IstitutoDto> {
+  async creaIstituto(form: { nome: string; descrizione?: string; citta?: string; url?: string }): Promise<IstitutoDto> {
     const { data } = await api.post<IstitutoDto>('/istituti', form);
     return data;
   },
 
-  async modificaIstituto(id: number, form: { nome: string; descrizione?: string; citta?: string }): Promise<IstitutoDto> {
+  async modificaIstituto(id: number, form: { nome: string; descrizione?: string; citta?: string; url?: string }): Promise<IstitutoDto> {
     const { data } = await api.put<IstitutoDto>(`/istituti/${id}`, form);
     return data;
   },

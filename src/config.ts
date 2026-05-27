@@ -10,13 +10,13 @@
 //
 import { Platform } from 'react-native';
 
-// Sul web (browser) si usa localhost; su dispositivo fisico l'IP LAN
-export const HOST = Platform.OS === 'web'
-  ? 'http://localhost:8080'
-  : 'http://192.168.1.29:8080';
+const envUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.111:8080';
+
+export const HOST = Platform.OS === 'web' ? 'http://localhost:8080' : envUrl;
 
 export const API_BASE_URL = `${HOST}/api`;
 
+const envHost = envUrl.replace(':8080', '');
 export const CHAT_BASE_URL = Platform.OS === 'web'
   ? 'http://localhost:5000/chat/'
-  : 'http://192.168.1.29:5000/chat/';
+  : `${envHost}:5000/chat/`;

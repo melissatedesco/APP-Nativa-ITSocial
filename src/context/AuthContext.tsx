@@ -5,6 +5,8 @@ import { authService } from '../services/authService';
 import { storage } from '../utils/storage';
 import { authEvents } from '../utils/authEvents';
 
+export const STORAGE_RESTORE_TIMEOUT_MS = 3000;
+
 // Converts raw Axios/network errors into readable Italian messages for the UI.
 function parseAuthError(err: unknown): Error {
   if (axios.isAxiosError(err)) {
@@ -72,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timeout = setTimeout(() => {
       console.warn('[AuthContext] timeout storage – sblocco UI');
       setIsLoading(false);
-    }, 3000);
+    }, STORAGE_RESTORE_TIMEOUT_MS);
 
     (async () => {
       try {

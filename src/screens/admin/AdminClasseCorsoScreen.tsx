@@ -108,6 +108,7 @@ export default function AdminClasseCorsoScreen() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>({ nome: '', descrizione: '', tipo: 'PUBBLICA', istitutoId: null });
+  const [nomeError, setNomeError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     adminService.getIstituti().then(setIstituti).catch(() => {});
@@ -121,11 +122,12 @@ export default function AdminClasseCorsoScreen() {
       tipo: (item.tipo as 'PUBBLICA' | 'PRIVATA') ?? 'PUBBLICA',
       istitutoId: item.istitutoId ?? null,
     });
+    setNomeError(undefined);
     setShowModal(true);
   }
 
   async function handleSubmit() {
-    if (!form.nome.trim()) { Alert.alert('Attenzione', 'Il nome è obbligatorio.'); return; }
+    if (!form.nome.trim()) { setNomeError('Il nome è obbligatorio.'); return; }
     if (editingId === null) return;
     setSaving(true);
     try {
@@ -255,10 +257,11 @@ export default function AdminClasseCorsoScreen() {
         submitLabel="Salva modifiche"
       >
         <Field
-          label="Nome"
+          label="Nome *"
           placeholder="es. 5A Informatica"
           value={form.nome}
-          onChangeText={v => setForm(p => ({ ...p, nome: v }))}
+          onChangeText={v => { setForm(p => ({ ...p, nome: v })); setNomeError(undefined); }}
+          error={nomeError}
         />
         <Field
           label="Descrizione (opzionale)"

@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -224,7 +225,7 @@ export default function NotificationsScreen() {
       await notificaService.elimina(id);
       setNotifiche(prev => prev.filter(x => x.id !== id));
     } catch {
-      // ignore
+      Alert.alert('Errore', 'Impossibile eliminare la notifica. Riprova.');
     }
   }
 
@@ -233,7 +234,7 @@ export default function NotificationsScreen() {
       await notificaService.segnaComeLetteTutte();
       setNotifiche(prev => prev.map(x => ({ ...x, letta: true })));
     } catch {
-      // ignore
+      Alert.alert('Errore', 'Impossibile aggiornare le notifiche. Riprova.');
     }
   }
 
