@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { notificaService } from '../../services/notificaService';
 import { NotificaDto, MainStackParamList } from '../../types';
@@ -66,6 +67,17 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     elevation: 3,
   },
   retryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  navBar: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.card,
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: C.border,
+    gap: 12,
+  },
+  navBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 4 },
+  navBackText: { fontSize: 14, fontWeight: '600', color: C.primary },
+  navTitle: { fontSize: 20, fontWeight: '700', color: C.text, flex: 1, textAlign: 'center' },
 
   header: {
     flexDirection: 'row',
@@ -172,6 +184,7 @@ export default function NotificationsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { colors: C } = useTheme();
   const styles = makeStyles(C);
+  const { top } = useSafeAreaInsets();
   const [notifiche, setNotifiche] = useState<NotificaDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -264,6 +277,21 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.page}>
+      <View style={[styles.navBar, { paddingTop: top + 8 }]}>
+        <TouchableOpacity
+          style={styles.navBackBtn}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Torna indietro"
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.primary} />
+          <Text style={styles.navBackText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.navTitle}>Notifiche</Text>
+        <MaterialCommunityIcons name="bell-outline" size={24} color={C.primary} />
+      </View>
+
       {nonLette > 0 && (
         <View style={styles.header}>
           <View style={styles.headerLeft}>

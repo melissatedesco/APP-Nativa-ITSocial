@@ -145,16 +145,7 @@ export function SharedSidebar({ extraTopOffset = 0 }: { extraTopOffset?: number 
             onPress={() => navigation.navigate('MyClass')}
             activeOpacity={0.75}
           >
-            <MaterialCommunityIcons name="school-outline" size={22} color={ICON_COLOR} />
-          </TouchableOpacity>
-
-          {/* Messaggi */}
-          <TouchableOpacity
-            style={styles.sidebarBtn}
-            onPress={() => navigation.navigate('Messages')}
-            activeOpacity={0.75}
-          >
-            <MaterialCommunityIcons name="message-outline" size={22} color={ICON_COLOR} />
+            <MaterialCommunityIcons name="google-classroom" size={22} color={ICON_COLOR} />
           </TouchableOpacity>
 
           <View style={styles.sidebarSep} />

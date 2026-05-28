@@ -57,7 +57,6 @@ function ThemedApp() {
 }
 
 export default function App() {
-  console.log('[App] componente montato');
   return (
     <GestureHandlerRootView style={styles.root}>
       <ErrorBoundary>

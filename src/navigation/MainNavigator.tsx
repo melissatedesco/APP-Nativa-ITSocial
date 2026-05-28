@@ -173,7 +173,7 @@ function MainTabs() {
         name="Notifications"
         component={NotificationsScreen}
         options={{
-          title: 'Notifiche',
+          headerShown: false,
           tabBarLabel: 'Notifiche',
           tabBarIcon: ({ color, focused }) => (
             <NotificationIcon color={color} focused={focused} />
@@ -215,8 +215,23 @@ export default function MainNavigator() {
       <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Modifica profilo' }} />
       <Stack.Screen name="Messages" component={MessaggiScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Chat" component={MessaggiScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="SavedPosts" component={SavedPostsScreen} options={{ title: 'Post salvati' }} />
-      <Stack.Screen name="MyClass" component={MyClassScreen} options={{ title: 'Le mie Classi' }} />
+      <Stack.Screen name="SavedPosts" component={SavedPostsScreen} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="MyClass"
+        component={MyClassScreen}
+        options={{
+          headerBackTitle: 'Back',
+          headerTintColor: '#4A8FD4',
+          headerTitle: () => (
+            <Text style={{ fontSize: 20, fontWeight: '700', color: '#1a2535', paddingVertical: 16 }}>
+              Le mie Classi
+            </Text>
+          ),
+          headerRight: () => (
+            <MaterialCommunityIcons name="google-classroom" size={26} color="#4A8FD4" />
+          ),
+        }}
+      />
       <Stack.Screen
         name="SmartinaChat"
         component={SmartinaChatScreen}

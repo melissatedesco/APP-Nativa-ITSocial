@@ -160,7 +160,7 @@ const makeStyles = (C: ThemeColors, isDark: boolean) => StyleSheet.create({
 
   backRow: { width: '100%', maxWidth: 440, paddingBottom: 8 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 4, alignSelf: 'flex-start' },
-  backBtnText: { fontSize: 14, fontWeight: '600', color: C.textSoft },
+  backBtnText: { fontSize: 14, fontWeight: '600', color: C.primary },
 });
 
 export default function LoginScreen({ navigation }: Props) {
@@ -206,8 +206,8 @@ export default function LoginScreen({ navigation }: Props) {
       >
         <View style={styles.backRow}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Welcome')} activeOpacity={0.7}>
-            <MaterialCommunityIcons name="arrow-left" size={20} color={C.textSoft} />
-            <Text style={styles.backBtnText}>Indietro</Text>
+            <MaterialCommunityIcons name="arrow-left" size={20} color={C.primary} />
+            <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
         </View>
 
