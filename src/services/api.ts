@@ -7,8 +7,6 @@ import { HOST, API_BASE_URL } from '../config';
 export const MEDIA_BASE_URL = HOST;
 const BASE_URL = API_BASE_URL;
 
-console.log('🌐 API Base URL:', BASE_URL);
-
 // ─── JWT expiry check ────────────────────────────────────────────────────────
 function isTokenExpired(token: string): boolean {
   try {
@@ -25,7 +23,7 @@ function isTokenExpired(token: string): boolean {
 
 export const api = axios.create({
   baseURL: BASE_URL,
-   timeout: 10000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -33,15 +31,10 @@ export const api = axios.create({
 
 // ─── Request interceptor ─────────────────────────────────────────────────────
 api.interceptors.request.use(async (config) => {
-  // FIX: parentesi esplicite per evitare precedenza errata tra ?? e +
-  const fullUrl = (config.baseURL ?? '') + (config.url ?? '');
-  console.log('[API →]', config.method?.toUpperCase(), fullUrl);
-
   const token = await storage.getToken();
 
   if (token) {
     if (isTokenExpired(token)) {
-      console.warn('[API] token scaduto – logout automatico');
       await storage.clearAuth();
       authEvents.emitAuthError();
       return Promise.reject(
@@ -49,9 +42,6 @@ api.interceptors.request.use(async (config) => {
       );
     }
     config.headers.Authorization = `Bearer ${token}`;
-    console.log('[API] token OK, lunghezza:', token.length);
-  } else {
-    console.warn('[API] nessun token – richiesta senza Authorization');
   }
 
   return config;
@@ -60,7 +50,6 @@ api.interceptors.request.use(async (config) => {
 // ─── Response interceptor ────────────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => {
-    console.log('[API ←]', response.status, response.config.url);
     networkEvents.emitOnline();
     return response;
   },
@@ -69,24 +58,8 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // ── Debug completo: parentesi corrette attorno alla concatenazione ────────
-    const cfg = error.config;
-    const fullUrl = (cfg?.baseURL ?? '') + (cfg?.url ?? '');
-    console.error('[API ERRORE] ─────────────────────────────────────');
-    console.error('  URL      :', fullUrl);
-    console.error('  Metodo   :', cfg?.method?.toUpperCase() ?? 'N/D');
-    console.error('  Headers  :', JSON.stringify(cfg?.headers ?? {}));
-    console.error('  Data     :', JSON.stringify(cfg?.data ?? null));
-    console.error('  Timeout  :', cfg?.timeout);
-    console.error('  Status   :', error.response?.status ?? 'nessuna risposta (ERR_NETWORK / timeout)');
-    console.error('  Msg      :', error.message);
-    console.error('  Code     :', error.code);
-    try { console.error('  JSON     :', JSON.stringify(error, Object.getOwnPropertyNames(error))); } catch {}
-    console.error('─────────────────────────────────────────────────');
-
     const status = error.response?.status;
 
-    // Nessuna risposta = rete assente
     if (!error.response && !axios.isCancel(error)) {
       networkEvents.emitOffline();
     }

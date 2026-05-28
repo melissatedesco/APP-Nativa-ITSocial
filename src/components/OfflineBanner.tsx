@@ -1,32 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { networkEvents } from '../utils/networkEvents';
 
 type BannerStatus = 'offline' | 'reconnected';
 
 export function OfflineBanner() {
   const [status, setStatus] = useState<BannerStatus | null>(null);
-  const slideAnim = useRef(new Animated.Value(-60)).current;
+  const slideAnim = useRef(new Animated.Value(-100)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { top } = useSafeAreaInsets();
 
   function slideIn() {
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    Animated.spring(slideAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      bounciness: 4,
-    }).start();
+    Animated.parallel([
+      Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, bounciness: 4 }),
+      Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
   }
 
   function slideOut(delay: number) {
     hideTimer.current = setTimeout(() => {
-      Animated.timing(slideAnim, {
-        toValue: -60,
-        duration: 280,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: -100, duration: 300, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start(() => setStatus(null));
     }, delay);
   }
 
@@ -55,27 +55,45 @@ export function OfflineBanner() {
   return (
     <Animated.View
       style={[
-        styles.banner,
-        { backgroundColor: isOffline ? '#dc2626' : '#16a34a', paddingTop: top + 6 },
-        { transform: [{ translateY: slideAnim }] },
+        styles.toast,
+        { top: top + 12 },
+        { transform: [{ translateY: slideAnim }], opacity: opacityAnim },
       ]}
     >
-      <Text style={styles.text}>
-        {isOffline ? '⚠ Nessuna connessione — dati dalla cache' : '✓ Connessione ripristinata'}
-      </Text>
+      <View style={[styles.inner, { backgroundColor: isOffline ? '#dc2626' : '#16a34a' }]}>
+        <MaterialCommunityIcons
+          name={isOffline ? 'wifi-off' : 'wifi-check'}
+          size={18}
+          color="#fff"
+        />
+        <Text style={styles.text}>
+          {isOffline ? 'Nessuna connessione' : 'Connessione ripristinata'}
+        </Text>
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
+  toast: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    left: 24,
+    right: 24,
     zIndex: 9999,
-    paddingBottom: 8,
     alignItems: 'center',
   },
-  text: { color: '#fff', fontWeight: '700', fontSize: 13, letterSpacing: 0.2 },
+  inner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  text: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });

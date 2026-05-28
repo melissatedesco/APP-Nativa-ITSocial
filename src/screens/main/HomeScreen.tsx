@@ -169,17 +169,17 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   pollMetaScaduto: { color: C.danger },
 
   smartinaBannerWrap: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4 },
-  smartinaBanner: { borderRadius: 28, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  smartinaAvatarCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0, borderWidth: 2, borderColor: C.primary, overflow: 'hidden' },
-  smartinaAvatarImg: { width: 44, height: 44 },
-  smartinaOnlineDot: { position: 'absolute', bottom: 1, right: 1, width: 10, height: 10, borderRadius: 5, backgroundColor: '#4ade80', borderWidth: 2, borderColor: '#0f2545' },
-  smartinaInfo: { flex: 1, gap: 2 },
-  smartinaNameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  smartinaName: { fontSize: 13, fontWeight: '700', color: '#fff', letterSpacing: -0.2 },
-  smartinaStatus: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 2 },
-  smartinaMsg: { fontSize: 13, color: 'rgba(255,255,255,0.88)', lineHeight: 18 },
-  smartinaCta: { backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, flexShrink: 0 },
-  smartinaCtaText: { fontSize: 12, fontWeight: '600', color: '#fff' },
+  smartinaBanner: { borderRadius: 28, paddingHorizontal: 18, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', gap: 16 },
+  smartinaAvatarCircle: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0, borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.5)', overflow: 'hidden' },
+  smartinaAvatarImg: { width: 64, height: 64 },
+  smartinaOnlineDot: { position: 'absolute', bottom: 2, right: 2, width: 13, height: 13, borderRadius: 7, backgroundColor: '#4ade80', borderWidth: 2.5, borderColor: '#0f2545' },
+  smartinaInfo: { flex: 1, gap: 4 },
+  smartinaNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  smartinaName: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 },
+  smartinaStatus: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginBottom: 2 },
+  smartinaMsg: { fontSize: 13, color: 'rgba(255,255,255,0.90)', lineHeight: 19 },
+  smartinaCta: { backgroundColor: '#fff', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, flexShrink: 0, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 4 },
+  smartinaCtaText: { fontSize: 13, fontWeight: '700', color: '#2B5BA8' },
 
   emptyState: { alignItems: 'center', paddingVertical: 64, gap: 8 },
   emptyEmoji: { fontSize: 40 },
@@ -669,16 +669,16 @@ function SmarTinaBanner({ onPress }: { onPress: () => void }) {
         style={styles.smartinaBanner}
       >
         <View style={styles.smartinaAvatarCircle}>
-          <Image source={require('../../../assets/smartina.png')} style={styles.smartinaAvatarImg} />
+          <ExpoImage source={require('../../../assets/smartina.gif')} style={styles.smartinaAvatarImg} contentFit="contain" />
           <View style={styles.smartinaOnlineDot} />
         </View>
         <View style={styles.smartinaInfo}>
           <View style={styles.smartinaNameRow}>
             <Text style={styles.smartinaName}>SmarTina</Text>
-            <MaterialCommunityIcons name="check-decagram" size={12} color="rgba(255,255,255,0.7)" />
+            <MaterialCommunityIcons name="check-decagram" size={14} color="rgba(255,255,255,0.8)" />
           </View>
-          <Text style={styles.smartinaStatus}>Online · pronta ad aiutarti</Text>
-          <Text style={styles.smartinaMsg}>Ciao, sono SmarTina. In cosa ti posso essere utile?</Text>
+          <Text style={styles.smartinaStatus}>Online · Assistente AI ITS</Text>
+          <Text style={styles.smartinaMsg}>Hai domande su corsi, scadenze o opportunità di stage?</Text>
         </View>
         <View style={styles.smartinaCta}>
           <Text style={styles.smartinaCtaText}>Chatta →</Text>

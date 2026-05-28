@@ -18,28 +18,37 @@ type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Welcome'> };
 
 const FEATURES: { icon: MCIName; color: string; bg: string; title: string; desc: string }[] = [
-  { icon: 'account-group',     color: '#4A8FD4', bg: '#EFF6FF', title: 'Networking Studentesco', desc: 'Connettiti con studenti del tuo corso o di altri ITS in tutta Italia.' },
+  { icon: 'account-network',   color: '#4A8FD4', bg: '#EFF6FF', title: 'Networking Studentesco', desc: 'Connettiti con studenti del tuo corso o di altri ITS in tutta Italia.' },
   { icon: 'share-variant',     color: '#F59E0B', bg: '#FFF7ED', title: 'Condivisione Risorse',   desc: 'Condividi appunti, materiali di studio e link utili con la community.' },
   { icon: 'book-open-variant', color: '#22C55E', bg: '#F0FDF4', title: 'Supporto allo Studio',   desc: 'Trova aiuto per esami, progetti e preparati al mondo del lavoro.' },
   { icon: 'auto-fix',          color: '#0EA5E9', bg: '#F0F9FF', title: 'SmarTina AI',            desc: 'La tua assistente intelligente per corsi, scadenze e ogni domanda ITS.' },
   { icon: 'briefcase-outline', color: '#F59E0B', bg: '#FFF7ED', title: 'Stage & Lavoro',         desc: 'Scopri opportunità di stage e aziende che cercano studenti ITS.' },
-  { icon: 'school',            color: '#4A8FD4', bg: '#EFF6FF', title: 'Community ITS',          desc: 'Un social pensato solo per gli studenti ITS, sicuro e verticale.' },
+  { icon: 'forum',             color: '#4A8FD4', bg: '#EFF6FF', title: 'Community ITS',          desc: 'Un social pensato solo per gli studenti ITS, sicuro e verticale.' },
 ];
 
 const makeStyles = (C: ThemeColors, topInset: number) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
 
   // ── Nav ──────────────────────────────────────────────────────────────────────
-  nav: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: topInset + 12,
+  navBlock: {
+    backgroundColor: C.card,
+    borderBottomWidth: 1, borderBottomColor: C.border,
+    paddingTop: topInset + 8,
     paddingBottom: 12,
-    backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border,
+    alignItems: 'center',
+    gap: 10,
   },
-  brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  navLogo: { width: 52, height: 52 },
+  nav: { alignItems: 'center', justifyContent: 'center' },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  navLogo: { width: 100, height: 100 },
   brandName: { fontWeight: '800', fontSize: 18, letterSpacing: -0.4, color: C.primary },
+  subNav: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, paddingHorizontal: 20, paddingVertical: 10,
+    marginHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1, borderColor: C.border,
+  },
   navActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 },
   themeToggle: {
     width: 34, height: 34, borderRadius: 17,
@@ -47,19 +56,19 @@ const makeStyles = (C: ThemeColors, topInset: number) => StyleSheet.create({
     borderWidth: 1, borderColor: C.border,
     backgroundColor: C.card,
   },
-  ghostBtn: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 9999, borderWidth: 1, borderColor: C.border },
-  ghostBtnText: { fontSize: 12, fontWeight: '600', color: C.text },
-  primaryBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9999, backgroundColor: '#4A8FD4' },
-  primaryBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  ghostBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 9999, borderWidth: 1, borderColor: C.border },
+  ghostBtnText: { fontSize: 13, fontWeight: '600', color: C.text },
+  primaryBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 9999, backgroundColor: '#4A8FD4' },
+  primaryBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   // ── Hero ─────────────────────────────────────────────────────────────────────
-  hero: { paddingHorizontal: 24, paddingTop: 72, paddingBottom: 24, alignItems: 'center' },
+  hero: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 24, alignItems: 'center' },
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE',
-    borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 20,
+    borderRadius: 9999, paddingHorizontal: 16, paddingVertical: 8, marginBottom: 20,
   },
-  chipText: { fontSize: 12, fontWeight: '600', color: '#2B5BA8' },
+  chipText: { fontSize: 16, fontWeight: '700', color: '#2B5BA8' },
   h1: {
     fontSize: 30, fontWeight: '800', textAlign: 'center',
     lineHeight: 38, letterSpacing: -0.6, color: C.text, marginBottom: 16,
@@ -153,9 +162,9 @@ const makeStyles = (C: ThemeColors, topInset: number) => StyleSheet.create({
 
   // ── Footer ───────────────────────────────────────────────────────────────────
   footer: {
-    paddingHorizontal: 24, paddingVertical: 24,
+    paddingHorizontal: 24, paddingVertical: 20,
     backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border,
-    alignItems: 'center', gap: 6,
+    alignItems: 'center',
   },
   footerText: { fontSize: 12, color: C.textMuted },
 });
@@ -168,24 +177,30 @@ export default function WelcomeScreen({ navigation }: Props) {
   return (
     <ScrollView style={S.page} showsVerticalScrollIndicator={false}>
 
-      {/* Nav */}
-      <View style={S.nav}>
-        <View style={S.brand}>
+      {/* Nav block — logo + azioni in un unico sfondo coerente */}
+      <View style={S.navBlock}>
+        <View style={S.nav}>
           <Image source={require('../../../assets/logo-itsocial.png')} style={S.navLogo} resizeMode="contain" />
-          <Text style={S.brandName}>ITSocial</Text>
         </View>
-        <View style={S.navActions}>
-          <TouchableOpacity style={S.themeToggle} onPress={toggleTheme} activeOpacity={0.7}>
+        <View style={S.subNav}>
+          <TouchableOpacity style={S.themeToggle} onPress={toggleTheme} activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={isDark ? 'Passa alla modalità chiara' : 'Passa alla modalità scura'}
+          >
             <MaterialCommunityIcons
               name={isDark ? 'weather-sunny' : 'weather-night'}
               size={20}
               color={C.textSoft}
             />
           </TouchableOpacity>
-          <TouchableOpacity style={S.ghostBtn} onPress={() => navigation.navigate('Login')}>
+          <TouchableOpacity style={S.ghostBtn} onPress={() => navigation.navigate('Login')}
+            accessibilityRole="button" accessibilityLabel="Accedi al tuo account"
+          >
             <Text style={S.ghostBtnText}>Accedi</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={S.primaryBtn} onPress={() => navigation.navigate('Register')}>
+          <TouchableOpacity style={S.primaryBtn} onPress={() => navigation.navigate('Register')}
+            accessibilityRole="button" accessibilityLabel="Registrati su ITSocial"
+          >
             <Text style={S.primaryBtnText}>Registrati</Text>
           </TouchableOpacity>
         </View>
@@ -194,7 +209,7 @@ export default function WelcomeScreen({ navigation }: Props) {
       {/* Hero */}
       <View style={S.hero}>
         <View style={S.chip}>
-          <MaterialCommunityIcons name="star-four-points" size={12} color="#2B5BA8" />
+          <MaterialCommunityIcons name="star-four-points" size={16} color="#2B5BA8" />
           <Text style={S.chipText}>Il social degli studenti ITS</Text>
         </View>
         <Text style={S.h1}>
@@ -277,10 +292,6 @@ export default function WelcomeScreen({ navigation }: Props) {
 
       {/* Footer */}
       <View style={S.footer}>
-        <View style={S.brand}>
-          <Image source={require('../../../assets/logo-itsocial.png')} style={[S.navLogo, { opacity: 0.85 }]} resizeMode="contain" />
-          <Text style={[S.brandName, { color: C.textMuted }]}>ITSocial</Text>
-        </View>
         <Text style={S.footerText}>© 2025 ITSocial · Tutti i diritti riservati</Text>
       </View>
 

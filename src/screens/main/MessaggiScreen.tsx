@@ -17,6 +17,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { messaggiService } from '../../services/messaggiService';
 import { ConversazioneDto, MessaggioDto } from '../../types';
@@ -97,6 +98,17 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 5,
   },
   unreadBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+
+  listHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.card,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: C.border,
+    gap: 12,
+  },
+  listHeaderTitle: { fontSize: 20, fontWeight: '700', color: C.text, flex: 1, textAlign: 'center' },
+  listBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 4 },
+  listBackBtnText: { fontSize: 14, fontWeight: '600', color: C.primary },
 
   emptyState: { alignItems: 'center', paddingVertical: 80, gap: 10 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: C.text },
@@ -546,6 +558,7 @@ export default function MessaggiScreen() {
   const styles = makeStyles(C);
   const { user } = useAuth();
   const navigation = useNavigation();
+  const { top } = useSafeAreaInsets();
   const route = useRoute();
   const routeUsername = (route.params as { username?: string } | undefined)?.username ?? null;
 
@@ -609,6 +622,20 @@ export default function MessaggiScreen() {
 
   return (
     <View style={styles.page}>
+      <View style={[styles.listHeader, { paddingTop: top + 8 }]}>
+        <TouchableOpacity
+          style={styles.listBackBtn}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Torna indietro"
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.primary} />
+          <Text style={styles.listBackBtnText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.listHeaderTitle}>Messaggi</Text>
+        <MaterialCommunityIcons name="message-text-outline" size={24} color={C.primary} />
+      </View>
       <ConversationList
         conversations={conversations}
         loading={loading}

@@ -12,7 +12,8 @@ import {
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MEDIA_BASE_URL } from '../../services/api';
 import { salvataggioService } from '../../services/salvataggioService';
 import { Post } from '../../types';
@@ -41,6 +42,16 @@ function getRuoloColor(ruolo?: string, C?: ThemeColors): string {
 const makeStyles = (C: ThemeColors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
   listContent: { padding: 16, paddingBottom: 40 },
+  listHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.card,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: C.border,
+    gap: 12,
+  },
+  listHeaderTitle: { fontSize: 20, fontWeight: '700', color: C.text, flex: 1, textAlign: 'center' },
+  listBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 4 },
+  listBackBtnText: { fontSize: 14, fontWeight: '600', color: C.primary },
 
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 32 },
   errorTitle: { fontSize: 16, fontWeight: '700', color: C.text, textAlign: 'center' },
@@ -201,6 +212,8 @@ function SavedPostCard({ post, onUnsave }: { post: Post; onUnsave: (id: number) 
 export default function SavedPostsScreen() {
   const { colors: C } = useTheme();
   const styles = makeStyles(C);
+  const navigation = useNavigation();
+  const { top } = useSafeAreaInsets();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -263,10 +276,25 @@ export default function SavedPostsScreen() {
   }
 
   return (
+    <View style={styles.page}>
+      <View style={[styles.listHeader, { paddingTop: top + 8 }]}>
+        <TouchableOpacity
+          style={styles.listBackBtn}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Torna indietro"
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color={C.primary} />
+          <Text style={styles.listBackBtnText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.listHeaderTitle}>Post Salvati</Text>
+        <View style={{ width: 32 }} />
+      </View>
     <FlatList
       data={posts}
       keyExtractor={item => String(item.id)}
-      style={styles.page}
+      style={{ flex: 1 }}
       contentContainerStyle={styles.listContent}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
@@ -285,5 +313,6 @@ export default function SavedPostsScreen() {
       )}
       ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
     />
+    </View>
   );
 }

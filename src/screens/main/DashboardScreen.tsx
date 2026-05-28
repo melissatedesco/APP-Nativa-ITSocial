@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CompositeNavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -220,10 +221,11 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   smartinaCard: {
     borderRadius: 28,
     marginHorizontal: 16,
-    padding: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 16,
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.14,
@@ -232,16 +234,33 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
     overflow: 'hidden',
   },
   smartinaAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+    overflow: 'hidden',
+    flexShrink: 0,
+    position: 'relative',
   },
-  smartinaBody: { flex: 1 },
-  smartinaTitle: { fontSize: 15, fontWeight: '800', color: '#fff' },
-  smartinaSub: { fontSize: 12, color: 'rgba(255,255,255,0.78)', marginTop: 2 },
+  smartinaOnlineDot: {
+    position: 'absolute', bottom: 2, right: 2,
+    width: 13, height: 13, borderRadius: 7,
+    backgroundColor: '#4ade80', borderWidth: 2.5, borderColor: '#1a3768',
+  },
+  smartinaBody: { flex: 1, gap: 4 },
+  smartinaNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  smartinaTitle: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: -0.3 },
+  smartinaStatus: { fontSize: 12, color: 'rgba(255,255,255,0.65)' },
+  smartinaSub: { fontSize: 13, color: 'rgba(255,255,255,0.90)', lineHeight: 19 },
+  smartinaCta: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 14, paddingVertical: 9,
+    borderRadius: 999, flexShrink: 0,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18, shadowRadius: 8, elevation: 4,
+  },
+  smartinaCtaText: { fontSize: 13, fontWeight: '700', color: '#2B5BA8' },
 
   // ─ Bottom grid
   grid: {
@@ -303,6 +322,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { profile } = useProfile();
+
 
   const [classi, setClassi] = useState<IscrizioneClasseDto[]>([]);
   const [bellCount, setBellCount] = useState(0);
@@ -462,13 +482,20 @@ export default function DashboardScreen() {
               style={styles.smartinaCard}
             >
               <View style={styles.smartinaAvatar}>
-                <Image source={require('../../../assets/smartina.png')} style={{ width: 36, height: 36 }} resizeMode="contain" />
+                <ExpoImage source={require('../../../assets/smartina.gif')} style={{ width: 64, height: 64 }} contentFit="contain" />
+                <View style={styles.smartinaOnlineDot} />
               </View>
               <View style={styles.smartinaBody}>
-                <Text style={styles.smartinaTitle}>Smartina</Text>
-                <Text style={styles.smartinaSub}>Chiedimi qualcosa, sono qui per aiutarti</Text>
+                <View style={styles.smartinaNameRow}>
+                  <Text style={styles.smartinaTitle}>SmarTina</Text>
+                  <MaterialCommunityIcons name="check-decagram" size={14} color="rgba(255,255,255,0.8)" />
+                </View>
+                <Text style={styles.smartinaStatus}>Online · Assistente AI ITS</Text>
+                <Text style={styles.smartinaSub}>Hai domande su corsi, scadenze o opportunità di stage?</Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={22} color="rgba(255,255,255,0.65)" />
+              <View style={styles.smartinaCta}>
+                <Text style={styles.smartinaCtaText}>Chatta →</Text>
+              </View>
             </LinearGradient>
           </TouchableOpacity>
         </View>
