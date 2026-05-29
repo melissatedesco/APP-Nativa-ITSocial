@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -167,6 +168,30 @@ const makeStyles = (C: ThemeColors, isDark: boolean) => StyleSheet.create({
   backRow: { width: '100%', maxWidth: 440, paddingBottom: 8 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 4, alignSelf: 'flex-start' },
   backBtnText: { fontSize: 14, fontWeight: '600', color: C.primary },
+
+  smartinaBanner: {
+    width: '100%', maxWidth: 440,
+    borderRadius: 24, paddingHorizontal: 18, paddingVertical: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    marginBottom: 20,
+  },
+  smartinaImg: { width: 72, height: 72, borderRadius: 36, flexShrink: 0 },
+  smartinaText: { flex: 1, gap: 3 },
+  smartinaChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999,
+    paddingHorizontal: 9, paddingVertical: 2, marginBottom: 2,
+  },
+  smartinaChipText: { fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
+  smartinaTitle: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
+  smartinaDesc: { fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 17, marginBottom: 8 },
+  smartinaBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.30)',
+    borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  smartinaBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 });
 
 export default function RegisterScreen({ navigation }: Props) {
@@ -235,6 +260,25 @@ export default function RegisterScreen({ navigation }: Props) {
             <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
         </View>
+
+        <LinearGradient
+          colors={['#2B5BA8', '#0f2545']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={styles.smartinaBanner}
+        >
+          <Image source={require('../../../assets/smartina.png')} style={styles.smartinaImg} resizeMode="contain" />
+          <View style={styles.smartinaText}>
+            <View style={styles.smartinaChip}>
+              <MaterialCommunityIcons name="auto-fix" size={10} color="rgba(255,255,255,0.85)" />
+              <Text style={styles.smartinaChipText}>Assistente AI</Text>
+            </View>
+            <Text style={styles.smartinaTitle}>Ciao, sono SmarTina!</Text>
+            <Text style={styles.smartinaDesc}>Registrati e chiedimi tutto su corsi, scadenze e opportunità ITS.</Text>
+            <TouchableOpacity style={styles.smartinaBtn} onPress={() => navigation.navigate('SmartinaChat')} activeOpacity={0.8}>
+              <Text style={styles.smartinaBtnText}>Chatta →</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
 
         <View style={styles.card}>
 

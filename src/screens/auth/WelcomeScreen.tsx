@@ -22,11 +22,11 @@ type Props = { navigation: NativeStackNavigationProp<AuthStackParamList, 'Welcom
 // Cast per usare <video> HTML su web senza errori TS
 const WebVideo = 'video' as any;
 
-const FEATURES: { icon: MCIName; color: string; bg: string; title: string; desc: string }[] = [
+const FEATURES: { icon: MCIName; color: string; bg: string; title: string; desc: string; image?: any }[] = [
   { icon: 'account-network',   color: '#4A8FD4', bg: '#EFF6FF', title: 'Networking Studentesco', desc: 'Connettiti con studenti del tuo corso o di altri ITS in tutta Italia.' },
   { icon: 'share-variant',     color: '#F59E0B', bg: '#FFF7ED', title: 'Condivisione Risorse',   desc: 'Condividi appunti, materiali di studio e link utili con la community.' },
   { icon: 'book-open-variant', color: '#22C55E', bg: '#F0FDF4', title: 'Supporto allo Studio',   desc: 'Trova aiuto per esami, progetti e preparati al mondo del lavoro.' },
-  { icon: 'auto-fix',          color: '#0EA5E9', bg: '#F0F9FF', title: 'SmarTina AI',            desc: 'La tua assistente intelligente per corsi, scadenze e ogni domanda ITS.' },
+  { icon: 'auto-fix',          color: '#0EA5E9', bg: '#F0F9FF', title: 'SmarTina AI',            desc: 'La tua assistente intelligente per corsi, scadenze e ogni domanda ITS.', image: require('../../../assets/smartina.png') },
   { icon: 'briefcase-outline', color: '#F59E0B', bg: '#FFF7ED', title: 'Stage & Lavoro',         desc: 'Scopri opportunità di stage e aziende che cercano studenti ITS.' },
   { icon: 'forum',             color: '#4A8FD4', bg: '#EFF6FF', title: 'Community ITS',          desc: 'Un social pensato solo per gli studenti ITS, sicuro e verticale.' },
 ];
@@ -286,7 +286,7 @@ export default function WelcomeScreen({ navigation }: Props) {
               <Text style={W.smartinaDesc}>
                 La tua assistente digitale ITS. Chiedimi dei corsi, delle scadenze, come muoverti nel social.
               </Text>
-              <TouchableOpacity style={W.smartinaBtn} onPress={() => navigation.navigate('Login')}>
+              <TouchableOpacity style={W.smartinaBtn} onPress={() => navigation.navigate('Register')}>
                 <Text style={W.smartinaBtnText}>Provala subito →</Text>
               </TouchableOpacity>
             </View>
@@ -303,7 +303,9 @@ export default function WelcomeScreen({ navigation }: Props) {
             {FEATURES.map((f) => (
               <View key={f.title} style={W.featCard}>
                 <View style={[W.featIcon, { backgroundColor: f.bg }]}>
-                  <MaterialCommunityIcons name={f.icon} size={24} color={f.color} />
+                  {f.image
+                    ? <Image source={f.image} style={{ width: 32, height: 32 }} resizeMode="contain" />
+                    : <MaterialCommunityIcons name={f.icon} size={24} color={f.color} />}
                 </View>
                 <Text style={W.featTitle}>{f.title}</Text>
                 <Text style={W.featDesc}>{f.desc}</Text>
@@ -398,7 +400,7 @@ export default function WelcomeScreen({ navigation }: Props) {
             <Text style={S.smartinaDesc}>
               La tua assistente digitale ITS. Chiedimi dei corsi, delle scadenze, come muoverti nel social.
             </Text>
-            <TouchableOpacity style={S.smartinaBtn} onPress={() => navigation.navigate('Login')}>
+            <TouchableOpacity style={S.smartinaBtn} onPress={() => navigation.navigate('Register')}>
               <Text style={S.smartinaBtnText}>Provala subito →</Text>
             </TouchableOpacity>
           </View>
@@ -412,7 +414,9 @@ export default function WelcomeScreen({ navigation }: Props) {
           {FEATURES.map((f) => (
             <View key={f.title} style={S.featCard}>
               <View style={[S.featIcon, { backgroundColor: f.bg }]}>
-                <MaterialCommunityIcons name={f.icon} size={22} color={f.color} />
+                {f.image
+                  ? <Image source={f.image} style={{ width: 28, height: 28 }} resizeMode="contain" />
+                  : <MaterialCommunityIcons name={f.icon} size={22} color={f.color} />}
               </View>
               <Text style={S.featTitle}>{f.title}</Text>
               <Text style={S.featDesc}>{f.desc}</Text>

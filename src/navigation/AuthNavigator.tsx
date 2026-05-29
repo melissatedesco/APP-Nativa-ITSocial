@@ -7,6 +7,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import VerificaCodiceScreen from '../screens/auth/VerificaCodiceScreen';
 import NuovaPasswordScreen from '../screens/auth/NuovaPasswordScreen';
+import SmartinaChatScreen from '../screens/main/SmartinaChatScreen';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
@@ -16,6 +17,7 @@ export default function AuthNavigator() {
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="SmartinaChat" component={SmartinaChatScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="VerificaCodice" component={VerificaCodiceScreen} />
       <Stack.Screen name="NuovaPassword" component={NuovaPasswordScreen} />
