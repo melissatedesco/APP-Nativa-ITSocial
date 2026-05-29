@@ -309,6 +309,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   Login: undefined;
   Register: undefined;
+  SmartinaChat: undefined;
   ForgotPassword: undefined;
   VerificaCodice: undefined;
   NuovaPassword: { codice: string };

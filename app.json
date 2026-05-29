@@ -28,7 +28,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-video"
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ITSocial vuole accedere alla tua galleria per cambiare la foto profilo."
+        }
+      ]
     ]
   }
 }
