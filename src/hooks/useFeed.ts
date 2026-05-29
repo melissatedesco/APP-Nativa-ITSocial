@@ -73,14 +73,13 @@ export function useFeed(): UseFeedReturn {
     }
 
     try {
-      const fetchFn = (): Promise<Post[]> => {
+      const fetchFn = () => {
         if (currentTab === 'seguiti') return postService.getFeedSeguiti(pg, PAGE_SIZE);
         if (currentTab === 'tendenze') return postService.getTrending(pg, PAGE_SIZE);
         return postService.getFeed(pg, PAGE_SIZE);
       };
-      let data: Post[];
-      data = await withRetry(fetchFn);
-      const arr = Array.isArray(data) ? data : [];
+      const response = await withRetry(fetchFn);
+      const arr = Array.isArray(response.contenuto) ? response.contenuto : [];
       if (append) {
         setPosts(prev => {
           const merged = [...prev, ...arr.filter(p => !new Set(prev.map(q => q.id)).has(p.id))];
@@ -91,7 +90,7 @@ export function useFeed(): UseFeedReturn {
         feedCache.set(currentTab, arr);
         setPosts(arr);
       }
-      setHasMore(arr.length === PAGE_SIZE);
+      setHasMore(!response.ultima);
     } catch (err) {
       if (!append) {
         const cached = feedCache.get(currentTab);
