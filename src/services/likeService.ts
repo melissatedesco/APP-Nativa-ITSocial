@@ -1,9 +1,5 @@
 import { api } from './api';
-
-interface LikeDto {
-  id?: number;
-  idPost: number;
-}
+import { LikeDto } from '../types';
 
 // Spring Data returns Page<T> — a wrapper object with a `content` array.
 interface SpringPage<T> {

@@ -125,10 +125,12 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999 },
   actionBtnActive: { backgroundColor: 'rgba(74,143,212,0.10)' },
   actionBtnSaved: { backgroundColor: C.saveBg },
+
   actionCount: { fontSize: 13, color: C.textSoft, fontWeight: '500' },
   actionCountLiked: { color: C.warm, fontWeight: '700' },
   actionCountActive: { color: C.primary, fontWeight: '600' },
   actionCountSaved: { color: C.primary, fontWeight: '600' },
+
 
   commentsSection: { borderTopWidth: 1, borderTopColor: C.border, paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
   commentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 },
@@ -707,18 +709,18 @@ export default function HomeScreen() {
     <View>
       {!isWeb && <SmarTinaBanner onPress={() => navigation.navigate('SmartinaChat')} />}
       <View style={styles.tabBar}>
-        {(['pertе', 'seguiti', 'tendenze'] as FeedTab[]).map((t) => (
+        {(['perte', 'seguiti', 'tendenze'] as FeedTab[]).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
             onPress={() => changeTab(t)}
             activeOpacity={0.8}
             accessibilityRole="tab"
-            accessibilityLabel={t === 'pertе' ? 'Per te' : t === 'seguiti' ? 'Seguiti' : 'Tendenze'}
+            accessibilityLabel={t === 'perte' ? 'Per te' : t === 'seguiti' ? 'Seguiti' : 'Tendenze'}
             accessibilityState={{ selected: tab === t }}
           >
             <Text style={[styles.tabBtnText, tab === t && styles.tabBtnTextActive]}>
-              {t === 'pertе' ? 'Per te' : t === 'seguiti' ? 'Seguiti' : '🔥 Tendenze'}
+              {t === 'perte' ? 'Per te' : t === 'seguiti' ? 'Seguiti' : '🔥 Tendenze'}
             </Text>
           </TouchableOpacity>
         ))}

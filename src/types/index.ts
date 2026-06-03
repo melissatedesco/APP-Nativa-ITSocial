@@ -77,6 +77,11 @@ export interface RegisterData {
   password: string;
 }
 
+export interface LikeDto {
+  id?: number;
+  idPost: number;
+}
+
 export interface AllegatoDto {
   id: number;
   nomeOriginale: string;
@@ -96,7 +101,7 @@ export interface Post {
   numeroLike: number;
   numeroCommenti?: number;
   commenti: CommentoDto[];
-  like: unknown[];
+  like: LikeDto[];
   allegati?: AllegatoDto[];
   sondaggio?: SondaggioDto | null;
 }

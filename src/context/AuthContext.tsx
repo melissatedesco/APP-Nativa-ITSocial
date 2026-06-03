@@ -69,10 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // On mount: restore persisted session so the user stays logged in after app restart.
   useEffect(() => {
-    console.log('[AuthContext] avvio ripristino sessione');
     // Safety net: if storage hangs for any reason, unblock the UI after 3 s.
     const timeout = setTimeout(() => {
-      console.warn('[AuthContext] timeout storage – sblocco UI');
       setIsLoading(false);
     }, STORAGE_RESTORE_TIMEOUT_MS);
 
@@ -82,13 +80,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           storage.getToken(),
           storage.getUser<LoginResponse>(),
         ]);
-        console.log('[AuthContext] storage letto – token:', !!savedToken, 'user:', !!savedUser);
         if (savedToken && savedUser) {
           setToken(savedToken);
           setUser(savedUser);
         }
-      } catch (e) {
-        console.error('[AuthContext] errore lettura storage:', e);
+      } catch {
+        // storage failure — start unauthenticated
       } finally {
         clearTimeout(timeout);
         setIsLoading(false);

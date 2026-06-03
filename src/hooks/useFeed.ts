@@ -7,7 +7,7 @@ import { likeService } from '../services/likeService';
 import { salvataggioService } from '../services/salvataggioService';
 import { withRetry } from '../utils/withRetry';
 
-export type FeedTab = 'pertе' | 'seguiti' | 'tendenze';
+export type FeedTab = 'perte' | 'seguiti' | 'tendenze';
 
 const PAGE_SIZE = 20;
 
@@ -51,7 +51,7 @@ export function useFeed(): UseFeedReturn {
   const [posts, setPosts] = useState<Post[]>([]);
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
-  const [tab, setTab] = useState<FeedTab>('pertе');
+  const [tab, setTab] = useState<FeedTab>('perte');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,7 +95,6 @@ export function useFeed(): UseFeedReturn {
       if (!append) {
         const cached = feedCache.get(currentTab);
         if (cached) {
-          // Rete assente: mostra la cache senza sovrascrivere, blocca il caricamento
           setPosts(cached);
           setHasMore(false);
         } else {
