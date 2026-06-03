@@ -18,7 +18,7 @@ export const userService = {
   },
 
   async followUser(username: string): Promise<void> {
-    await api.post(`/segui/${username}`);
+    await api.post(`/segui/${username}`, {});
   },
 
   async unfollowUser(username: string): Promise<void> {

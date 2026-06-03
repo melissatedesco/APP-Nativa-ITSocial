@@ -51,4 +51,5 @@ export const postService = {
   async deletePost(id: number): Promise<void> {
     await api.delete(`/post/elimina/${id}`);
   },
+
 };

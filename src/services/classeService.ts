@@ -59,7 +59,7 @@ export const classeService = {
   },
 
   async iscrivitiConCodice(codice: string): Promise<IscrizioneClasseDto> {
-    const { data } = await api.post<IscrizioneClasseDto>(`/classi/iscriviti-con-codice/${codice}`);
+    const { data } = await api.post<IscrizioneClasseDto>(`/classi/iscriviti-con-codice/${codice}`, {});
     return data;
   },
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -13,12 +14,15 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile } from '../../context/UserContext';
 import { useTheme, ThemeColors } from '../../context/ThemeContext';
+import { userService } from '../../services/userService';
+import { MEDIA_BASE_URL } from '../../services/api';
 
-const AVATAR_SIZE = 96;
+const AVATAR_SIZE = 100;
 
 const makeStyles = (C: ThemeColors, isDark: boolean) => StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
@@ -29,21 +33,41 @@ const makeStyles = (C: ThemeColors, isDark: boolean) => StyleSheet.create({
     alignItems: 'center',
   },
 
-  avatarSection: { alignItems: 'center', gap: 8 },
+  avatarSection: { alignItems: 'center', gap: 10 },
   avatarWrap: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
-    overflow: 'hidden',
+    overflow: 'visible',
     shadowColor: '#1E293B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
+    position: 'relative',
+  },
+  avatarInner: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    overflow: 'hidden',
   },
   avatarImg: { width: '100%', height: '100%' },
   avatarGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  avatarLetter: { color: '#fff', fontSize: 36, fontWeight: '800' },
+  avatarLetter: { color: '#fff', fontSize: 38, fontWeight: '800' },
+  avatarCameraBtn: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: C.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2.5,
+    borderColor: C.bg,
+  },
   avatarHint: { fontSize: 12, color: C.textSoft },
 
   formCard: {
@@ -139,7 +163,8 @@ export default function EditProfileScreen() {
   const [nome, setNome] = useState('');
   const [cognome, setCognome] = useState('');
   const [bio, setBio] = useState('');
-  const [fotoProfilo, setFotoProfilo] = useState('');
+  const [serverPhotoUrl, setServerPhotoUrl] = useState('');
+  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -155,12 +180,29 @@ export default function EditProfileScreen() {
       setNome(profile.nome ?? '');
       setCognome(profile.cognome ?? '');
       setBio(profile.bio ?? '');
-      setFotoProfilo(profile.fotoProfilo ?? '');
+      setServerPhotoUrl(profile.fotoProfilo ?? '');
     } else if (user) {
       setNome(user.nome ?? '');
       setCognome(user.cognome ?? '');
     }
   }, [profile]);
+
+  async function pickImage() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permesso richiesto', "Abilita l'accesso alla galleria nelle impostazioni.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (!result.canceled) {
+      setLocalImageUri(result.assets[0].uri);
+    }
+  }
 
   async function handleSave() {
     if (!nome.trim() || !cognome.trim()) {
@@ -172,11 +214,20 @@ export default function EditProfileScreen() {
     setSuccess(false);
 
     try {
+      let finalPhotoUrl: string | undefined = serverPhotoUrl || undefined;
+
+      if (localImageUri) {
+        const updated = await userService.updateProfilePhoto(localImageUri);
+        finalPhotoUrl = updated.fotoProfilo;
+        setServerPhotoUrl(updated.fotoProfilo ?? '');
+        setLocalImageUri(null);
+      }
+
       await updateProfile({
         nome: nome.trim(),
         cognome: cognome.trim(),
         bio: bio.trim() || undefined,
-        fotoProfilo: fotoProfilo.trim() || undefined,
+        fotoProfilo: finalPhotoUrl,
       });
 
       setSuccess(true);
@@ -188,9 +239,14 @@ export default function EditProfileScreen() {
     }
   }
 
-  const currentPhoto = fotoProfilo.trim() || profile?.fotoProfilo || null;
   const displayInitial = ((nome || user?.nome || '?')[0]).toUpperCase();
   const canSave = nome.trim().length > 0 && cognome.trim().length > 0 && !saving;
+
+  // Build the URI to show in the avatar: prefer locally picked, then server URL
+  const displayUri: string | null = localImageUri
+    ?? (serverPhotoUrl
+      ? (serverPhotoUrl.startsWith('http') ? serverPhotoUrl : MEDIA_BASE_URL + serverPhotoUrl)
+      : null);
 
   return (
     <KeyboardAvoidingView
@@ -203,21 +259,32 @@ export default function EditProfileScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Avatar */}
-        <View style={styles.avatarSection}>
+        {/* Avatar con image picker */}
+        <TouchableOpacity
+          style={styles.avatarSection}
+          onPress={pickImage}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Cambia foto profilo"
+        >
           <View style={styles.avatarWrap}>
-            {currentPhoto ? (
-              <Image source={{ uri: currentPhoto }} style={styles.avatarImg} />
-            ) : (
-              <LinearGradient colors={AVATAR_GRADIENT} style={styles.avatarGradient}>
-                <Text style={styles.avatarLetter}>{displayInitial}</Text>
-              </LinearGradient>
-            )}
+            <View style={styles.avatarInner}>
+              {displayUri ? (
+                <Image source={{ uri: displayUri }} style={styles.avatarImg} />
+              ) : (
+                <LinearGradient colors={AVATAR_GRADIENT} style={styles.avatarGradient}>
+                  <Text style={styles.avatarLetter}>{displayInitial}</Text>
+                </LinearGradient>
+              )}
+            </View>
+            <View style={styles.avatarCameraBtn}>
+              <MaterialCommunityIcons name="camera" size={16} color="#fff" />
+            </View>
           </View>
           <Text style={styles.avatarHint}>
-            Inserisci un URL foto nel campo sottostante
+            {localImageUri ? 'Foto selezionata — salva per applicare' : 'Tocca per cambiare la foto'}
           </Text>
-        </View>
+        </TouchableOpacity>
 
         {/* Form */}
         <View style={styles.formCard}>
@@ -245,20 +312,6 @@ export default function EditProfileScreen() {
               onChangeText={v => { setCognome(v); setError(''); }}
               autoCapitalize="words"
               autoCorrect={false}
-            />
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Foto profilo (URL)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="https://esempio.com/mia-foto.jpg"
-              placeholderTextColor={C.textMuted}
-              value={fotoProfilo}
-              onChangeText={v => { setFotoProfilo(v); setError(''); }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
             />
           </View>
 
