@@ -1,3 +1,12 @@
+export interface PageResponse<T> {
+  contenuto: T[];
+  numeroPagina: number;
+  dimensionePagina: number;
+  totaleElementi: number;
+  totalePagine: number;
+  ultima: boolean;
+}
+
 export interface RuoloDto {
   id: number;
   nome: string;
@@ -305,6 +314,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   Login: undefined;
   Register: undefined;
+  SmartinaChat: undefined;
   ForgotPassword: undefined;
   VerificaCodice: undefined;
   NuovaPassword: { codice: string };

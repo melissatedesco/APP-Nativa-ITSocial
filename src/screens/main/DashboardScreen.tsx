@@ -270,7 +270,7 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   },
   gridCard: {
     flex: 1,
-    aspectRatio: 1,
+    aspectRatio: 16 / 9,
     borderRadius: 28,
     padding: 20,
     justifyContent: 'space-between',

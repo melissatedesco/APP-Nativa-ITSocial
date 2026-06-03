@@ -1,14 +1,14 @@
 import { api } from './api';
-import { Post } from '../types';
+import { Post, PageResponse } from '../types';
 
 export const postService = {
-  async getFeed(page = 0, size = 20): Promise<Post[]> {
-    const { data } = await api.get<Post[]>('/post', { params: { page, size } });
+  async getFeed(page = 0, size = 20): Promise<PageResponse<Post>> {
+    const { data } = await api.get<PageResponse<Post>>('/post', { params: { page, size } });
     return data;
   },
 
-  async getTrending(page = 0, size = 20): Promise<Post[]> {
-    const { data } = await api.get<Post[]>('/post/tendenze', { params: { size, page } });
+  async getTrending(page = 0, size = 20): Promise<PageResponse<Post>> {
+    const { data } = await api.get<PageResponse<Post>>('/post/tendenze', { params: { size, page } });
     return data;
   },
 
@@ -22,8 +22,8 @@ export const postService = {
     return data;
   },
 
-  async getFeedSeguiti(page = 0, size = 20): Promise<Post[]> {
-    const { data } = await api.get<Post[]>('/post/seguiti', { params: { page, size } });
+  async getFeedSeguiti(page = 0, size = 20): Promise<PageResponse<Post>> {
+    const { data } = await api.get<PageResponse<Post>>('/post/seguiti', { params: { page, size } });
     return data;
   },
 

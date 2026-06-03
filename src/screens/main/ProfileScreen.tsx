@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -27,7 +28,7 @@ import { SharedSidebar } from '../../components/SharedSidebar';
 const BANNER_GRADIENT: [string, string, string] = ['#00bcd4', '#0097a7', '#006064'];
 const AVATAR_SIZE = 108;
 const BANNER_H = 165;
-const GRID_GAP = 2;
+const GRID_GAP = 6;
 
 function formatDate(iso?: string): string {
   if (!iso) return '—';
@@ -46,7 +47,7 @@ function StatCell({ value, label, styles, onPress }: { value: number; label: str
 function PostGridItem({ post, cellSize, styles }: { post: Post; cellSize: number; styles: any }) {
   const firstImage = post.allegati?.find(a => a.tipo === 'IMAGE');
   return (
-    <View style={[styles.gridCell, { width: cellSize, height: cellSize }]}>
+    <View style={[styles.gridCell, { width: cellSize, height: Math.round(cellSize * 1.45) }]}>
       {firstImage ? (
         <ExpoImage
           source={{ uri: MEDIA_BASE_URL + firstImage.url }}
@@ -54,12 +55,18 @@ function PostGridItem({ post, cellSize, styles }: { post: Post; cellSize: number
           contentFit="cover"
         />
       ) : (
-        <View style={styles.gridTextCell}>
-          <Text style={styles.gridText} numberOfLines={5}>{post.contenuto}</Text>
-        </View>
+        <LinearGradient
+          colors={['#60a5fa', '#3b82f6']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gridTextCell}
+        >
+          <MaterialCommunityIcons name="text" size={14} color="rgba(255,255,255,0.4)" style={{ marginBottom: 4 }} />
+          <Text style={styles.gridText} numberOfLines={4}>{post.contenuto}</Text>
+        </LinearGradient>
       )}
       <View style={styles.gridOverlay}>
-        <MaterialCommunityIcons name="star" size={10} color="#f59e0b" />
+        <MaterialCommunityIcons name="heart" size={11} color="#f87171" />
         <Text style={styles.gridLikeText}>{post.numeroLike ?? 0}</Text>
       </View>
     </View>
@@ -121,6 +128,19 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   avatarImg: { width: '100%', height: '100%' },
   avatarGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   avatarLetter: { color: '#fff', fontSize: 42, fontWeight: '800', letterSpacing: -1 },
+  avatarCameraBtn: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: C.primary,
+    borderWidth: 2,
+    borderColor: C.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   content: {
     paddingTop: AVATAR_SIZE / 2 + 16,
@@ -197,20 +217,31 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   adminTitle: { fontSize: 15, fontWeight: '700', color: '#fff' },
   adminDesc: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
-  postsSection: { gap: 10 },
-  postsSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  postsSection: { gap: 12 },
+  postsSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 2 },
   postsBadge: { backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 2 },
   postsBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 
-  emptyPosts: { alignItems: 'center', paddingVertical: 40, gap: 10, backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border },
+  emptyPosts: {
+    alignItems: 'center', paddingVertical: 48, gap: 10,
+    backgroundColor: C.card, borderRadius: 18, borderWidth: 1, borderColor: C.border,
+  },
   emptyText: { fontSize: 14, color: C.textSoft },
 
-  postsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
-  gridCell: { overflow: 'hidden', borderRadius: 6, backgroundColor: C.border, position: 'relative' },
+  postsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  gridCell: {
+    overflow: 'hidden', borderRadius: 12, backgroundColor: C.border, position: 'relative',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 6, elevation: 3,
+  },
   gridImage: { width: '100%', height: '100%' },
-  gridTextCell: { flex: 1, backgroundColor: C.inputBg, padding: 8, justifyContent: 'center' },
-  gridText: { fontSize: 10, color: C.textSoft, lineHeight: 15 },
-  gridOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(0,0,0,0.42)', paddingHorizontal: 5, paddingVertical: 3 },
+  gridTextCell: { flex: 1, padding: 10, justifyContent: 'flex-end' },
+  gridText: { fontSize: 11, color: 'rgba(255,255,255,0.90)', lineHeight: 16, fontWeight: '500' },
+  gridOverlay: {
+    position: 'absolute', top: 8, right: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 999,
+    paddingHorizontal: 7, paddingVertical: 3,
+  },
   gridLikeText: { fontSize: 10, color: '#fff', fontWeight: '700' },
 });
 
@@ -233,6 +264,9 @@ export default function ProfileScreen() {
   const [seguito, setSeguito] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [displayedCount, setDisplayedCount] = useState(9);
+
+  useEffect(() => { setDisplayedCount(9); }, [targetUsername]);
 
   const profilo: ProfiloDto | null = isOwnProfile ? profile : otherProfilo;
   const isCurrentlyLoading = isOwnProfile ? profileLoading : loading;
@@ -256,7 +290,16 @@ export default function ProfileScreen() {
   async function pickAndUploadPhoto() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permesso negato', "Abilita l'accesso alla galleria nelle impostazioni.");
+      if (!perm.canAskAgain) {
+        Alert.alert(
+          'Accesso galleria negato',
+          "Per cambiare la foto profilo devi abilitare l'accesso alla galleria nelle impostazioni dell'app.",
+          [
+            { text: 'Annulla', style: 'cancel' },
+            { text: 'Apri Impostazioni', onPress: () => Linking.openSettings() },
+          ],
+        );
+      }
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -367,11 +410,20 @@ export default function ProfileScreen() {
   const username = profilo?.username ?? targetUsername;
   const avatarLetter = (username[0] ?? '?').toUpperCase();
   const posts: Post[] = (profilo?.posts as Post[]) ?? [];
+  const displayedPosts = posts.slice(0, displayedCount);
+  const hasMore = displayedCount < posts.length;
+
+  function handleScroll({ nativeEvent }: any) {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 300 && hasMore) {
+      setDisplayedCount(c => Math.min(c + 9, posts.length));
+    }
+  }
   const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-    <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.page} showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={300}>
 
       {/* Banner + Avatar */}
       <View style={styles.bannerContainer}>
@@ -394,6 +446,11 @@ export default function ProfileScreen() {
             <LinearGradient colors={AVATAR_GRADIENT} style={styles.avatarGradient}>
               <Text style={styles.avatarLetter}>{avatarLetter}</Text>
             </LinearGradient>
+          )}
+          {isOwnProfile && !photoUploading && (
+            <View style={styles.avatarCameraBtn}>
+              <MaterialCommunityIcons name="camera" size={14} color="#fff" />
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -524,7 +581,7 @@ export default function ProfileScreen() {
         {/* Post grid */}
         <View style={styles.postsSection}>
           <View style={styles.postsSectionHeader}>
-            <Text style={styles.sectionTitle}>Post</Text>
+            <Text style={styles.sectionTitle}>{isOwnProfile ? 'I miei post' : 'Post'}</Text>
             <View style={styles.postsBadge}>
               <Text style={styles.postsBadgeText}>{profilo?.numPost ?? 0}</Text>
             </View>
@@ -536,10 +593,13 @@ export default function ProfileScreen() {
             </View>
           ) : (
             <View style={styles.postsGrid}>
-              {posts.map(post => (
+              {displayedPosts.map(post => (
                 <PostGridItem key={String(post.id)} post={post} cellSize={cellSize} styles={styles} />
               ))}
             </View>
+          )}
+          {hasMore && (
+            <ActivityIndicator size="small" color={C.primary} style={{ marginTop: 12 }} />
           )}
         </View>
 
