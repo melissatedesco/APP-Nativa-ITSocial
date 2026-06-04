@@ -6,6 +6,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   RefreshControl,
   ScrollView,
@@ -26,6 +27,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme, ThemeColors, getRuoloBadge } from '../../context/ThemeContext';
 import { MEDIA_BASE_URL } from '../../services/api';
 import { commentoService } from '../../services/commentoService';
+import { postService } from '../../services/postService';
+import { segnalazioneService, MOTIVI_SEGNALAZIONE, MotivoSegnalazione } from '../../services/segnalazioneService';
 import { sondaggioService } from '../../services/sondaggioService';
 import { Post, CommentoDto, SondaggioDto, MainStackParamList } from '../../types';
 import { useFeed, FeedTab } from '../../hooks/useFeed';
@@ -458,22 +461,26 @@ function PostSkeleton() {
 }
 
 // ─── PostCard ─────────────────────────────────────────────────────────────────
-const PostCard = React.memo(function PostCard({ post, liked, saved, onLike, onSave, onDelete, onPressAuthor, onPressDetail, currentUsername }: {
+const PostCard = React.memo(function PostCard({ post, liked, saved, onLike, onSave, onDelete, onEdit, onSegnala, onPressAuthor, onPressDetail, currentUsername, isAdmin }: {
   post: Post;
   liked: boolean;
   saved: boolean;
   onLike: (id: number) => void;
   onSave: (id: number) => void;
   onDelete: (id: number) => void;
+  onEdit: (id: number, contenuto: string) => void;
+  onSegnala: (id: number) => void;
   onPressAuthor: (username: string) => void;
   onPressDetail: () => void;
   currentUsername: string;
+  isAdmin: boolean;
 }) {
   const { colors: C } = useTheme();
   const styles = useMemo(() => makeStyles(C), [C]);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const ruoloTag = getRuoloBadge(post.ruoloUtente);
   const isOwn = post.usernameUtente === currentUsername;
+  const canManage = isOwn || isAdmin;
   const images = post.allegati?.filter(a => a.tipo === 'IMAGE') ?? [];
   const imageUris = images.map(a => MEDIA_BASE_URL + a.url);
   const [viewerVisible, setViewerVisible] = useState(false);
@@ -509,10 +516,15 @@ const PostCard = React.memo(function PostCard({ post, liked, saved, onLike, onSa
           </View>
           <Text style={styles.postMeta}>@{post.usernameUtente}{'  ·  '}{timeAgo(post.dataOra)}</Text>
         </View>
-        {isOwn && (
-          <TouchableOpacity style={styles.deletePostBtn} onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Elimina post">
-            <MaterialCommunityIcons name="close" size={18} color={C.textMuted} />
-          </TouchableOpacity>
+        {canManage && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <TouchableOpacity style={styles.deletePostBtn} onPress={() => onEdit(post.id, post.contenuto)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Modifica post">
+              <MaterialCommunityIcons name="pencil-outline" size={18} color={C.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deletePostBtn} onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Elimina post">
+              <MaterialCommunityIcons name="close" size={18} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
         )}
       </TouchableOpacity>
 
@@ -564,6 +576,13 @@ const PostCard = React.memo(function PostCard({ post, liked, saved, onLike, onSa
           <MaterialCommunityIcons name={saved ? 'bookmark' : 'bookmark-outline'} size={19} color={saved ? C.primary : C.textSoft} />
           <Text style={[styles.actionCount, saved && styles.actionCountSaved]}>{saved ? 'Salvato' : 'Salva'}</Text>
         </TouchableOpacity>
+
+        {!isOwn && (
+          <TouchableOpacity style={styles.actionBtn} onPress={() => onSegnala(post.id)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Segnala post">
+            <MaterialCommunityIcons name="flag-outline" size={19} color={C.textSoft} />
+            <Text style={styles.actionCount}>Segnala</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
     </View>
@@ -701,6 +720,44 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { posts, likedIds, savedIds, tab, isLoading, isRefreshing, isLoadingMore, feedError, publishError, changeTab, refresh, loadMore, toggleLike, toggleSave, deletePost, publishPost } = useFeed();
   const currentUsername = user?.username ?? '';
+  const isAdmin = user?.ruoli?.some(r => r.alias === 'ADMIN' || r.nome?.toLowerCase() === 'admin') ?? false;
+
+  const [editingPost, setEditingPost] = useState<{ id: number; contenuto: string } | null>(null);
+  const [editText, setEditText] = useState('');
+  const [segnalaPostId, setSegnalaPostId] = useState<number | null>(null);
+  const [motivoSelezionato, setMotivoSelezionato] = useState<MotivoSegnalazione | null>(null);
+
+  function handleOpenEdit(id: number, contenuto: string) {
+    setEditingPost({ id, contenuto });
+    setEditText(contenuto);
+  }
+
+  async function handleSaveEdit() {
+    if (!editingPost) return;
+    try {
+      await postService.updatePost(editingPost.id, editText.trim());
+      setEditingPost(null);
+      refresh();
+    } catch {
+      Alert.alert('Errore', 'Impossibile modificare il post. Riprova.');
+    }
+  }
+
+  function handleOpenSegnala(id: number) {
+    setSegnalaPostId(id);
+    setMotivoSelezionato(null);
+  }
+
+  async function handleInviaSegnalazione() {
+    if (!segnalaPostId || !motivoSelezionato) return;
+    try {
+      await segnalazioneService.segnala(segnalaPostId, motivoSelezionato);
+      setSegnalaPostId(null);
+      Alert.alert('Segnalazione inviata', 'Grazie per la segnalazione. La esamineremo al più presto.');
+    } catch {
+      Alert.alert('Errore', 'Impossibile inviare la segnalazione. Riprova.');
+    }
+  }
 
   const likedIdsRef = useRef(likedIds);
   likedIdsRef.current = likedIds;
@@ -762,12 +819,15 @@ export default function HomeScreen() {
         onLike={toggleLike}
         onSave={toggleSave}
         onDelete={deletePost}
+        onEdit={handleOpenEdit}
+        onSegnala={handleOpenSegnala}
         onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
         onPressDetail={() => navigation.navigate('PostDetail', { postId: item.id, initialLiked: likedIdsRef.current.has(item.id), initialSaved: savedIdsRef.current.has(item.id) })}
         currentUsername={currentUsername}
+        isAdmin={isAdmin}
       />
     </View>
-  ), [toggleLike, toggleSave, deletePost, currentUsername, navigation]);
+  ), [toggleLike, toggleSave, deletePost, handleOpenEdit, handleOpenSegnala, currentUsername, isAdmin, navigation]);
 
   const feedList = (
     <FlatList
@@ -815,13 +875,70 @@ export default function HomeScreen() {
     />
   );
 
+  const segnalaModal = (
+    <Modal visible={segnalaPostId !== null} transparent animationType="fade" onRequestClose={() => setSegnalaPostId(null)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <View style={{ backgroundColor: C.card, borderRadius: 16, padding: 20, width: '100%', maxWidth: 480, gap: 12 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: C.text }}>Segnala post</Text>
+          <Text style={{ fontSize: 13, color: C.textSoft }}>Seleziona il motivo della segnalazione:</Text>
+          {MOTIVI_SEGNALAZIONE.map(m => (
+            <TouchableOpacity
+              key={m.valore}
+              onPress={() => setMotivoSelezionato(m.valore)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: motivoSelezionato === m.valore ? C.primary + '22' : C.bg, borderWidth: 1, borderColor: motivoSelezionato === m.valore ? C.primary : C.border }}
+            >
+              <MaterialCommunityIcons
+                name={motivoSelezionato === m.valore ? 'radiobox-marked' : 'radiobox-blank'}
+                size={20}
+                color={motivoSelezionato === m.valore ? C.primary : C.textMuted}
+              />
+              <Text style={{ fontSize: 14, color: C.text }}>{m.etichetta}</Text>
+            </TouchableOpacity>
+          ))}
+          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+            <TouchableOpacity onPress={() => setSegnalaPostId(null)} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: C.border }}>
+              <Text style={{ color: C.textSoft, fontWeight: '600' }}>Annulla</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleInviaSegnalazione} disabled={!motivoSelezionato} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: motivoSelezionato ? C.primary : C.border }}>
+              <Text style={{ color: '#fff', fontWeight: '600' }}>Invia</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const editModal = (
+    <Modal visible={!!editingPost} transparent animationType="fade" onRequestClose={() => setEditingPost(null)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <View style={{ backgroundColor: C.card, borderRadius: 16, padding: 20, width: '100%', maxWidth: 480, gap: 16 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: C.text }}>Modifica post</Text>
+          <TextInput
+            value={editText}
+            onChangeText={setEditText}
+            multiline
+            style={{ backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, color: C.text, fontSize: 14, minHeight: 100, maxHeight: 200 }}
+            placeholderTextColor={C.textMuted}
+          />
+          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
+            <TouchableOpacity onPress={() => setEditingPost(null)} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: C.border }}>
+              <Text style={{ color: C.textSoft, fontWeight: '600' }}>Annulla</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSaveEdit} style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: C.primary }}>
+              <Text style={{ color: '#fff', fontWeight: '600' }}>Salva</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   if (isWeb) {
     return (
       <View style={{ flex: 1, flexDirection: 'row', backgroundColor: C.bg }}>
         {showLeftNav && <WebNavSidebar collapsed={false} />}
         {showCollapsedNav && <WebNavSidebar collapsed />}
 
-        {/* Center feed column */}
         <View style={{ flex: 1, alignItems: 'center' }}>
           <View style={{ width: '100%' as any, maxWidth: 660 as any, flex: 1 }}>
             {feedList}
@@ -829,6 +946,8 @@ export default function HomeScreen() {
         </View>
 
         {showRightPanel && <WebRightPanel />}
+        {editModal}
+        {segnalaModal}
       </View>
     );
   }
@@ -837,6 +956,8 @@ export default function HomeScreen() {
     <View style={{ flex: 1 }}>
       {feedList}
       <SharedSidebar extraTopOffset={10} />
+      {editModal}
+      {segnalaModal}
     </View>
   );
 }

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "APP-Nativa-ITSocial",
-    "slug": "APP-Nativa-ITSocial",
+    "name": "ITSocial",
+    "slug": "ITSocial",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -30,7 +30,9 @@
       "usesCleartextTraffic": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "ITSocial",
+      "title": "ITSocial"
     },
     "plugins": [
       "expo-video",

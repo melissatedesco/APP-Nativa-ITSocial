@@ -255,7 +255,7 @@ export default function SmartinaChatScreen() {
       const res = await chatbotService.sendMessage(userIdRef.current, text);
       setMessages(prev => [
         ...prev,
-        { id: (Date.now() + 1).toString(), role: 'assistant', text: res.smartina, timestamp: new Date() },
+        { id: (Date.now() + 1).toString(), role: 'assistant', text: res.reply, timestamp: new Date() },
       ]);
     } catch {
       setMessages(prev => [
@@ -366,6 +366,12 @@ export default function SmartinaChatScreen() {
               multiline
               returnKeyType="send"
               onSubmitEditing={handleSend}
+              onKeyPress={(e: any) => {
+                if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                  e.preventDefault?.();
+                  handleSend();
+                }
+              }}
               editable={!loading}
             />
             <TouchableOpacity
