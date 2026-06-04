@@ -25,6 +25,7 @@ import { useTheme, ThemeColors } from '../../context/ThemeContext';
 
 // Cache module-level: sopravvive ai remount, consente stale-while-revalidate
 const msgCache = new Map<string, { messages: MessaggioDto[]; lastId: number }>();
+let convCache: ConversazioneDto[] | null = null;
 
 type ScreenView = 'list' | 'chat';
 
@@ -569,12 +570,13 @@ export default function MessaggiScreen() {
       ? { altroUtente: { id: 0, username: routeUsername, nome: routeUsername, cognome: '' }, nonLetti: 0 }
       : null
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(convCache === null);
   const [refreshing, setRefreshing] = useState(false);
 
   async function loadConversazioni() {
     try {
       const data = await messaggiService.getConversazioni();
+      convCache = data;
       setConversations(data);
     } catch {
       // stay with current
@@ -585,10 +587,14 @@ export default function MessaggiScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (view === 'list') {
+      if (view !== 'list') return;
+      if (convCache) {
+        setConversations(convCache);
+        setLoading(false);
+      } else {
         setLoading(true);
-        loadConversazioni();
       }
+      loadConversazioni();
     }, [view])
   );
 
@@ -607,7 +613,7 @@ export default function MessaggiScreen() {
     if (routeUsername) { navigation.goBack(); return; }
     setView('list');
     setActiveConv(null);
-    loadConversazioni();
+    // useFocusEffect si attiva automaticamente al cambio di view
   }
 
   if (view === 'chat' && activeConv) {

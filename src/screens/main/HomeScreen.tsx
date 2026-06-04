@@ -530,6 +530,8 @@ const PostCard = React.memo(function PostCard({ post, liked, saved, onLike, onSa
                 source={{ uri: MEDIA_BASE_URL + a.url }}
                 style={images.length === 1 ? styles.postImageSingle : styles.postImageGrid}
                 contentFit="cover"
+                cachePolicy="disk"
+                transition={150}
               />
             </TouchableOpacity>
           ))}
@@ -700,7 +702,25 @@ export default function HomeScreen() {
   const { posts, likedIds, savedIds, tab, isLoading, isRefreshing, isLoadingMore, feedError, publishError, changeTab, refresh, loadMore, toggleLike, toggleSave, deletePost, publishPost } = useFeed();
   const currentUsername = user?.username ?? '';
 
+  const likedIdsRef = useRef(likedIds);
+  likedIdsRef.current = likedIds;
+  const savedIdsRef = useRef(savedIds);
+  savedIdsRef.current = savedIds;
+
+  const heightCache = useRef<Map<number, number>>(new Map());
+
   const isWeb = Platform.OS === 'web';
+  const SEPARATOR_H = isWeb ? 12 : 10;
+  const ESTIMATED_H = 260;
+
+  const getItemLayout = useCallback((_: Post[] | null, index: number) => {
+    let offset = 0;
+    for (let i = 0; i < index; i++) {
+      offset += (heightCache.current.get(posts[i]?.id) ?? ESTIMATED_H) + SEPARATOR_H;
+    }
+    const length = heightCache.current.get(posts[index]?.id) ?? ESTIMATED_H;
+    return { length, offset, index };
+  }, [posts, SEPARATOR_H]);
   const showLeftNav = isWeb && width >= 720;
   const showRightPanel = isWeb && width >= 1100;
   const showCollapsedNav = isWeb && width >= 600 && width < 720;
@@ -734,22 +754,25 @@ export default function HomeScreen() {
   );
 
   const renderPost = useCallback(({ item }: { item: Post }) => (
-    <PostCard
-      post={item}
-      liked={likedIds.has(item.id)}
-      saved={savedIds.has(item.id)}
-      onLike={toggleLike}
-      onSave={toggleSave}
-      onDelete={deletePost}
-      onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
-      onPressDetail={() => navigation.navigate('PostDetail', { postId: item.id, initialLiked: likedIds.has(item.id), initialSaved: savedIds.has(item.id) })}
-      currentUsername={currentUsername}
-    />
-  ), [likedIds, savedIds, toggleLike, toggleSave, deletePost, currentUsername, navigation]);
+    <View onLayout={({ nativeEvent }) => { heightCache.current.set(item.id, nativeEvent.layout.height); }}>
+      <PostCard
+        post={item}
+        liked={likedIdsRef.current.has(item.id)}
+        saved={savedIdsRef.current.has(item.id)}
+        onLike={toggleLike}
+        onSave={toggleSave}
+        onDelete={deletePost}
+        onPressAuthor={(username) => navigation.navigate('UserProfile', { username })}
+        onPressDetail={() => navigation.navigate('PostDetail', { postId: item.id, initialLiked: likedIdsRef.current.has(item.id), initialSaved: savedIdsRef.current.has(item.id) })}
+        currentUsername={currentUsername}
+      />
+    </View>
+  ), [toggleLike, toggleSave, deletePost, currentUsername, navigation]);
 
   const feedList = (
     <FlatList
       data={posts}
+      extraData={[likedIds, savedIds]}
       keyExtractor={(item) => String(item.id)}
       style={styles.page}
       contentContainerStyle={[styles.listContent, isWeb && { paddingHorizontal: 0 }]}
@@ -757,6 +780,7 @@ export default function HomeScreen() {
       ListHeaderComponent={ListHeader}
       onEndReached={loadMore}
       onEndReachedThreshold={0.4}
+      getItemLayout={getItemLayout}
       removeClippedSubviews={Platform.OS !== 'web'}
       maxToRenderPerBatch={5}
       windowSize={5}

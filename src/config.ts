@@ -10,7 +10,7 @@
 //
 import { Platform } from 'react-native';
 
-const envUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.65:8080';
+const envUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.1.111:8080';
 
 export const HOST = Platform.OS === 'web' ? 'http://localhost:8080' : envUrl;
 
