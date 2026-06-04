@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import axios from 'axios';
 import { Post } from '../types';
@@ -51,6 +51,11 @@ export function useFeed(): UseFeedReturn {
   const [posts, setPosts] = useState<Post[]>([]);
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
+
+  const likedIdsRef = useRef(likedIds);
+  likedIdsRef.current = likedIds;
+  const savedIdsRef = useRef(savedIds);
+  savedIdsRef.current = savedIds;
   const [tab, setTab] = useState<FeedTab>('perte');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -124,20 +129,18 @@ export function useFeed(): UseFeedReturn {
   }
 
   useEffect(() => {
-    (async () => {
-      setIsLoading(true);
-      await Promise.all([fetchPosts(tab, 0, false), fetchLikedIds(), fetchSavedIds()]);
-      setIsLoading(false);
-    })();
-  }, []);
+    setPage(0);
+    setHasMore(true);
+    setIsLoading(!feedCache.has(tab));
+    Promise.all([fetchPosts(tab, 0, false), fetchLikedIds(), fetchSavedIds()])
+      .finally(() => setIsLoading(false));
+  // fetchPosts/fetchLikedIds/fetchSavedIds sono funzioni locali stabili per il ciclo di vita del hook
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   function changeTab(newTab: FeedTab): void {
     if (newTab === tab) return;
     setTab(newTab);
-    setPage(0);
-    setHasMore(true);
-    setIsLoading(true);
-    fetchPosts(newTab, 0, false).finally(() => setIsLoading(false));
   }
 
   const refresh = useCallback((): void => {
@@ -157,8 +160,8 @@ export function useFeed(): UseFeedReturn {
     fetchPosts(tab, nextPage, true).finally(() => setIsLoadingMore(false));
   }
 
-  function toggleLike(postId: number): void {
-    const wasLiked = likedIds.has(postId);
+  const toggleLike = useCallback(function toggleLike(postId: number): void {
+    const wasLiked = likedIdsRef.current.has(postId);
     setLikedIds(prev => {
       const next = new Set(prev);
       wasLiked ? next.delete(postId) : next.add(postId);
@@ -188,10 +191,10 @@ export function useFeed(): UseFeedReturn {
         )
       );
     });
-  }
+  }, []);
 
-  function toggleSave(postId: number): void {
-    const wasSaved = savedIds.has(postId);
+  const toggleSave = useCallback(function toggleSave(postId: number): void {
+    const wasSaved = savedIdsRef.current.has(postId);
     setSavedIds(prev => {
       const next = new Set(prev);
       wasSaved ? next.delete(postId) : next.add(postId);
@@ -207,16 +210,16 @@ export function useFeed(): UseFeedReturn {
         return next;
       });
     });
-  }
+  }, []);
 
-  async function deletePost(postId: number): Promise<void> {
+  const deletePost = useCallback(async function deletePost(postId: number): Promise<void> {
     try {
       await postService.deletePost(postId);
       setPosts(prev => prev.filter(p => p.id !== postId));
     } catch {
       Alert.alert('Errore', 'Impossibile eliminare il post. Riprova.');
     }
-  }
+  }, []);
 
   async function publishPost(text: string, imageUris?: string[]): Promise<void> {
     setPublishError(null);
