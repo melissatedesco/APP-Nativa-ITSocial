@@ -13,7 +13,7 @@
 const axios = require('axios');
 
 // ─── Configurazione ────────────────────────────────────────────────────────────
-const BASE_URL = 'http://192.168.1.111:8080/api';
+const BASE_URL = 'http://192.168.1.35:8080/api';
 
 const TEST_USERS = [
   { nome: 'Marco',   cognome: 'Rossi',    username: 'marco.rossi',    email: 'marco.rossi@test.it',    password: 'Password123!' },

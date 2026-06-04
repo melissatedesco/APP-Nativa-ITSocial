@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Switch,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -53,6 +54,8 @@ function PostGridItem({ post, cellSize, styles }: { post: Post; cellSize: number
           source={{ uri: MEDIA_BASE_URL + firstImage.url }}
           style={styles.gridImage}
           contentFit="cover"
+          cachePolicy="disk"
+          transition={150}
         />
       ) : (
         <LinearGradient
@@ -249,7 +252,7 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { profile, isLoading: profileLoading, loadProfile } = useProfile();
   const { colors: C, isDark, toggleTheme } = useTheme();
-  const styles = makeStyles(C);
+  const styles = useMemo(() => makeStyles(C), [C]);
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const route = useRoute();
   const { width } = useWindowDimensions();
@@ -264,9 +267,6 @@ export default function ProfileScreen() {
   const [seguito, setSeguito] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
-  const [displayedCount, setDisplayedCount] = useState(9);
-
-  useEffect(() => { setDisplayedCount(9); }, [targetUsername]);
 
   const profilo: ProfiloDto | null = isOwnProfile ? profile : otherProfilo;
   const isCurrentlyLoading = isOwnProfile ? profileLoading : loading;
@@ -343,6 +343,10 @@ export default function ProfileScreen() {
   }
 
   function handleLogout() {
+    if (Platform.OS === 'web') {
+      if ((window as any).confirm('Sei sicuro di voler uscire?')) logout();
+      return;
+    }
     Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
       { text: 'Annulla', style: 'cancel' },
       { text: 'Esci', style: 'destructive', onPress: logout },
@@ -380,6 +384,29 @@ export default function ProfileScreen() {
     }
   }
 
+  const posts: Post[] = (profilo?.posts as Post[]) ?? [];
+  const ROW_HEIGHT = Math.round(cellSize * 1.45);
+
+  const postRows = useMemo(() => {
+    const rows: Post[][] = [];
+    for (let i = 0; i < posts.length; i += 3) rows.push(posts.slice(i, i + 3));
+    return rows;
+  }, [posts]);
+
+  const getRowLayout = useCallback((_: any, index: number) => ({
+    length: ROW_HEIGHT,
+    offset: (ROW_HEIGHT + GRID_GAP) * index,
+    index,
+  }), [ROW_HEIGHT]);
+
+  const renderRow = useCallback(({ item }: { item: Post[] }) => (
+    <View style={{ flexDirection: 'row', gap: GRID_GAP, paddingHorizontal: 16 }}>
+      {item.map(post => (
+        <PostGridItem key={String(post.id)} post={post} cellSize={cellSize} styles={styles} />
+      ))}
+    </View>
+  ), [cellSize, styles]);
+
   if (isCurrentlyLoading) {
     return (
       <View style={styles.centered}>
@@ -409,22 +436,10 @@ export default function ProfileScreen() {
     : `${user?.nome ?? ''} ${user?.cognome ?? ''}`;
   const username = profilo?.username ?? targetUsername;
   const avatarLetter = (username[0] ?? '?').toUpperCase();
-  const posts: Post[] = (profilo?.posts as Post[]) ?? [];
-  const displayedPosts = posts.slice(0, displayedCount);
-  const hasMore = displayedCount < posts.length;
-
-  function handleScroll({ nativeEvent }: any) {
-    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 300 && hasMore) {
-      setDisplayedCount(c => Math.min(c + 9, posts.length));
-    }
-  }
   const AVATAR_GRADIENT: [string, string] = [C.primary, C.primaryDark];
 
-  return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-    <ScrollView style={styles.page} showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={300}>
-
+  const profileHeader = (
+    <View>
       {/* Banner + Avatar */}
       <View style={styles.bannerContainer}>
         <LinearGradient colors={BANNER_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.banner}>
@@ -441,7 +456,7 @@ export default function ProfileScreen() {
               <ActivityIndicator size="large" color="#fff" />
             </View>
           ) : profilo?.fotoProfilo ? (
-            <ExpoImage source={{ uri: profilo.fotoProfilo }} style={styles.avatarImg} contentFit="cover" />
+            <ExpoImage source={{ uri: profilo.fotoProfilo }} style={styles.avatarImg} contentFit="cover" cachePolicy="disk" />
           ) : (
             <LinearGradient colors={AVATAR_GRADIENT} style={styles.avatarGradient}>
               <Text style={styles.avatarLetter}>{avatarLetter}</Text>
@@ -455,8 +470,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-
+      <View style={[styles.content, { paddingBottom: GRID_GAP }]}>
         {/* Identity */}
         <View style={styles.identityRow}>
           <View style={styles.identityLeft}>
@@ -552,7 +566,10 @@ export default function ProfileScreen() {
         )}
 
         {/* Pannello Admin — visibile solo al ruolo ADMIN */}
-        {isOwnProfile && (profilo?.ruolo ?? user?.ruoli?.[0]?.nome)?.toUpperCase() === 'ADMIN' && (
+        {isOwnProfile && (
+          profilo?.ruolo?.toUpperCase().includes('ADMIN') ||
+          user?.ruoli?.some(r => r.nome?.toUpperCase().includes('ADMIN') || r.alias?.toUpperCase().includes('ADMIN'))
+        ) && (
           <TouchableOpacity
             style={styles.adminCard}
             onPress={() => navigation.navigate('AdminPanel')}
@@ -578,34 +595,43 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        {/* Post grid */}
-        <View style={styles.postsSection}>
-          <View style={styles.postsSectionHeader}>
-            <Text style={styles.sectionTitle}>{isOwnProfile ? 'I miei post' : 'Post'}</Text>
-            <View style={styles.postsBadge}>
-              <Text style={styles.postsBadgeText}>{profilo?.numPost ?? 0}</Text>
-            </View>
+        {/* Intestazione griglia post */}
+        <View style={styles.postsSectionHeader}>
+          <Text style={styles.sectionTitle}>{isOwnProfile ? 'I miei post' : 'Post'}</Text>
+          <View style={styles.postsBadge}>
+            <Text style={styles.postsBadgeText}>{profilo?.numPost ?? 0}</Text>
           </View>
-          {posts.length === 0 ? (
+        </View>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <FlatList<Post[]>
+        style={styles.page}
+        data={postRows}
+        keyExtractor={(_, index) => String(index)}
+        renderItem={renderRow}
+        getItemLayout={getRowLayout}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={{ height: GRID_GAP }} />}
+        ListHeaderComponent={profileHeader}
+        ListEmptyComponent={
+          <View style={{ paddingHorizontal: 16, paddingTop: GRID_GAP }}>
             <View style={styles.emptyPosts}>
               <MaterialCommunityIcons name="image-multiple-outline" size={36} color={C.textMuted} />
               <Text style={styles.emptyText}>Nessun post ancora.</Text>
             </View>
-          ) : (
-            <View style={styles.postsGrid}>
-              {displayedPosts.map(post => (
-                <PostGridItem key={String(post.id)} post={post} cellSize={cellSize} styles={styles} />
-              ))}
-            </View>
-          )}
-          {hasMore && (
-            <ActivityIndicator size="small" color={C.primary} style={{ marginTop: 12 }} />
-          )}
-        </View>
-
-      </View>
-    </ScrollView>
-    <SharedSidebar extraTopOffset={10} />
+          </View>
+        }
+        contentContainerStyle={{ paddingBottom: 48 }}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        initialNumToRender={6}
+        removeClippedSubviews
+      />
+      <SharedSidebar extraTopOffset={10} />
     </View>
   );
 }
