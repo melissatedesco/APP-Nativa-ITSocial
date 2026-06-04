@@ -7,7 +7,7 @@ export interface ChatBotRequest {
 }
 
 export interface ChatBotResponse {
-  smartina: string;
+  reply: string;
 }
 
 const chatApi = axios.create({

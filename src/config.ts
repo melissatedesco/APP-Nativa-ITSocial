@@ -18,5 +18,5 @@ export const API_BASE_URL = `${HOST}/api`;
 
 const envHost = envUrl.replace(':8080', '');
 export const CHAT_BASE_URL = Platform.OS === 'web'
-  ? 'http://localhost:5000/chat/'
-  : `${envHost}:5000/chat/`;
+  ? 'http://localhost:8000/chat/'
+  : `${envHost}:8000/chat/`;
