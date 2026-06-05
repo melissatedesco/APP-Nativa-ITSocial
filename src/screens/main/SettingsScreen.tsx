@@ -297,6 +297,10 @@ export default function SettingsScreen() {
   const [pwdVisible, setPwdVisible] = useState(false);
 
   function handleLogout() {
+    if (Platform.OS === 'web') {
+      if ((window as any).confirm('Sei sicuro di voler uscire dall\'account?')) logout();
+      return;
+    }
     Alert.alert(
       'Esci',
       'Sei sicuro di voler uscire dall\'account?',
